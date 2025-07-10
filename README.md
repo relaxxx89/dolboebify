@@ -1,3 +1,5 @@
+# Dolboebify Music Player (НИХУЯ НЕ ЗАКОНЧЕНЫЙ НЕ ВОРКАЮЩИЙ ДО СИХ ПОР ПЛЕЕР!!!!))))
+
 # Dolboebify Music Player
 
 Красивый музыкальный плеер на Python с графическим интерфейсом (PyQt5) и поддержкой форматов mp3, wav, flac (через VLC).
@@ -37,3 +39,4 @@ python main.py
 
 ## Лицензия
 См. файл LICENSE 
+
