@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 import vlc
 import os
+from vlc import State
 
 class MusicPlayer(QMainWindow):
     def __init__(self):
@@ -14,7 +15,12 @@ class MusicPlayer(QMainWindow):
         self.setGeometry(200, 200, 500, 350)
         self.setStyleSheet("background-color: #23272f; color: #fff;")
 
-        self.player = vlc.MediaPlayer()
+        self.vlc_instance = vlc.Instance([])
+        if self.vlc_instance is None:
+            raise RuntimeError("VLC instance is None. Проверьте установку VLC и python-vlc.")
+        self.player = self.vlc_instance.media_player_new()
+        if self.player is None:
+            raise RuntimeError("VLC media player could not be created.")
         self.playlist = []
         self.current_index = -1
 
@@ -50,7 +56,7 @@ class MusicPlayer(QMainWindow):
 
         # Now playing label
         self.now_playing = QLabel('')
-        self.now_playing.setAlignment(Qt.AlignCenter)
+        self.now_playing.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.now_playing.setStyleSheet("font-size: 16px; margin: 10px;")
 
         # Layouts
@@ -87,7 +93,7 @@ class MusicPlayer(QMainWindow):
     def play(self):
         if self.current_index == -1 and self.playlist:
             self.play_track(0)
-        elif self.player.get_state() == vlc.State.Paused:
+        elif self.player.get_state() == 4:
             self.player.play()
         elif self.current_index != -1:
             self.player.play()
