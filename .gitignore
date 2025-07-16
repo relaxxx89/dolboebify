@@ -131,3 +131,9 @@ dmypy.json
 .vscode/
 *.swp
 *.swo 
+build_aur_package.sh
+dolboebify.desktop
+dolboebify.install
+PKGBUILD
+README.AUR
+.SRCINFO
