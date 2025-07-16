@@ -47,7 +47,10 @@ class CLIApp:
         table = Table.grid(expand=True)
 
         # Add track info
-        table.add_row(f"[yellow]Now Playing:[/yellow] [green]{track_title}[/green]")
+        table.add_row(
+            f"[yellow]Now Playing:[/yellow] "
+            f"[green]{track_title}[/green]"
+        )
 
         # Add progress bar
         progress = self._create_progress_bar()
@@ -82,7 +85,9 @@ class CLIApp:
         """Play all audio files in a directory as a playlist."""
         count = self.player.load_playlist(directory)
         if count > 0:
-            self.console.print(f"[green]Loaded {count} tracks from {directory}[/green]")
+            self.console.print(
+                f"[green]Loaded {count} tracks from {directory}[/green]"
+            )
             if self.player.play(self.player.playlist[0]["path"]):
                 self._run_player_interface()
         else:

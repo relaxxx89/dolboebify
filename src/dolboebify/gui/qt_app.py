@@ -82,19 +82,27 @@ class PlayerWindow(QMainWindow):
         controls_layout = QHBoxLayout()
 
         self.play_button = QPushButton()
-        self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.play_button.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaPlay)
+        )
         self.play_button.clicked.connect(self.toggle_playback)
 
         self.prev_button = QPushButton()
-        self.prev_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipBackward))
+        self.prev_button.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaSkipBackward)
+        )
         self.prev_button.clicked.connect(self.previous_track)
 
         self.next_button = QPushButton()
-        self.next_button.setIcon(self.style().standardIcon(QStyle.SP_MediaSkipForward))
+        self.next_button.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaSkipForward)
+        )
         self.next_button.clicked.connect(self.next_track)
 
         self.stop_button = QPushButton()
-        self.stop_button.setIcon(self.style().standardIcon(QStyle.SP_MediaStop))
+        self.stop_button.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaStop)
+        )
         self.stop_button.clicked.connect(self.stop)
 
         self.open_file_button = QPushButton("Open File")
@@ -130,7 +138,9 @@ class PlayerWindow(QMainWindow):
         main_layout.addWidget(playlist_label)
 
         self.playlist_widget = QListWidget()
-        self.playlist_widget.itemDoubleClicked.connect(self.playlist_item_clicked)
+        self.playlist_widget.itemDoubleClicked.connect(
+            self.playlist_item_clicked
+        )
         main_layout.addWidget(self.playlist_widget)
 
     def format_time(self, milliseconds: int) -> str:
@@ -148,13 +158,21 @@ class PlayerWindow(QMainWindow):
             self.progress_slider.setValue(int(position_percent))
 
             # Update time labels
-            self.current_time_label.setText(self.format_time(self.player.position))
-            self.total_time_label.setText(self.format_time(self.player.duration))
+            self.current_time_label.setText(
+                self.format_time(self.player.position)
+            )
+            self.total_time_label.setText(
+                self.format_time(self.player.duration)
+            )
 
             # Update track info
             if self.player.playlist and self.player.current_index >= 0:
-                track_title = self.player.playlist[self.player.current_index]["title"]
-                self.now_playing_label.setText(f"Now Playing: {track_title}")
+                track_title = (
+                    self.player.playlist[self.player.current_index]["title"]
+                )
+                self.now_playing_label.setText(
+                    f"Now Playing: {track_title}"
+                )
 
     @pyqtSlot(int)
     def set_position(self, position: int):
@@ -169,16 +187,22 @@ class PlayerWindow(QMainWindow):
 
         if self.player.is_playing:
             self.player.pause()
-            self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+            self.play_button.setIcon(
+                self.style().standardIcon(QStyle.SP_MediaPlay)
+            )
         else:
             self.player.play()
-            self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+            self.play_button.setIcon(
+                self.style().standardIcon(QStyle.SP_MediaPause)
+            )
 
     @pyqtSlot()
     def stop(self):
         """Stop playback."""
         self.player.stop()
-        self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.play_button.setIcon(
+            self.style().standardIcon(QStyle.SP_MediaPlay)
+        )
         self.progress_slider.setValue(0)
         self.current_time_label.setText("00:00")
 
@@ -191,14 +215,18 @@ class PlayerWindow(QMainWindow):
     def previous_track(self):
         """Play the previous track in the playlist."""
         if self.player.previous_track():
-            self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+            self.play_button.setIcon(
+                self.style().standardIcon(QStyle.SP_MediaPause)
+            )
             self.update_playlist_selection()
 
     @pyqtSlot()
     def next_track(self):
         """Play the next track in the playlist."""
         if self.player.next_track():
-            self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+            self.play_button.setIcon(
+                self.style().standardIcon(QStyle.SP_MediaPause)
+            )
             self.update_playlist_selection()
 
     @pyqtSlot()
@@ -208,7 +236,8 @@ class PlayerWindow(QMainWindow):
             self,
             "Open Audio File",
             str(Path.home()),
-            "Audio Files (*.mp3 *.wav *.ogg *.flac *.aac *.wma " "*.m4a *.aiff *.alac)",
+            "Audio Files (*.mp3 *.wav *.ogg *.flac *.aac *.wma "
+            "*.m4a *.aiff *.alac)",
         )
 
         if file_path:
@@ -272,7 +301,9 @@ class PlayerWindow(QMainWindow):
         if 0 <= index < len(self.player.playlist):
             self.player.current_index = index
             self.player.play(self.player.playlist[index]["path"])
-            self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+            self.play_button.setIcon(
+                self.style().standardIcon(QStyle.SP_MediaPause)
+            )
 
 
 class GUIApp:

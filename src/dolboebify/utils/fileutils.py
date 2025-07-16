@@ -21,7 +21,9 @@ def get_supported_formats() -> Set[str]:
     }
 
 
-def get_audio_files(directory: Union[str, Path], recursive: bool = True) -> List[Path]:
+def get_audio_files(
+    directory: Union[str, Path], recursive: bool = True
+) -> List[Path]:
     """
     Get all supported audio files in a directory.
 
