@@ -1,12 +1,10 @@
 """PyQt5 GUI implementation for the Dolboebify audio player."""
 
-import os
 import sys
 from pathlib import Path
-from typing import List, Optional
 
-from PyQt5.QtCore import QDir, Qt, QTime, QTimer, QUrl, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -210,7 +208,7 @@ class PlayerWindow(QMainWindow):
             self,
             "Open Audio File",
             str(Path.home()),
-            "Audio Files (*.mp3 *.wav *.ogg *.flac *.aac *.wma *.m4a *.aiff *.alac)",
+            "Audio Files (*.mp3 *.wav *.ogg *.flac *.aac *.wma " "*.m4a *.aiff *.alac)",
         )
 
         if file_path:
@@ -269,11 +267,11 @@ class PlayerWindow(QMainWindow):
 
     @pyqtSlot(QListWidgetItem)
     def playlist_item_clicked(self, item):
-        """Handle playlist item double click."""
+        """Play the clicked playlist item."""
         index = self.playlist_widget.row(item)
         if 0 <= index < len(self.player.playlist):
-            self.player.current_index = index - 1
-            self.player.next_track()
+            self.player.current_index = index
+            self.player.play(self.player.playlist[index]["path"])
             self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
 
 

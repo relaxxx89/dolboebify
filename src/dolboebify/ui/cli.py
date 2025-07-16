@@ -1,6 +1,5 @@
 """Command-line interface for the Dolboebify audio player."""
 
-import os
 import sys
 import time
 from pathlib import Path
@@ -52,7 +51,7 @@ class CLIApp:
 
         # Add progress bar
         progress = self._create_progress_bar()
-        task_id = progress.add_task(
+        progress.add_task(
             f"{self._format_time(position)} / {self._format_time(duration)}",
             total=100,
             completed=int(self.player.position_percent),

@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 import vlc
-from pydub import AudioSegment
 
 from dolboebify.utils.exceptions import AudioFormatNotSupportedError
 

@@ -1,8 +1,7 @@
 """Utilities for file operations."""
 
-import os
 from pathlib import Path
-from typing import List, Optional, Set, Union
+from typing import List, Set, Union
 
 from dolboebify.utils.exceptions import AudioFormatNotSupportedError
 

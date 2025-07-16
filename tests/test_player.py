@@ -1,8 +1,5 @@
 """Tests for the Player class."""
 
-import os
-import tempfile
-from pathlib import Path
 from unittest import mock
 
 import pytest
