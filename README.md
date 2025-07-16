@@ -2,6 +2,11 @@
 
 A modern audio player written in Python that supports various audio formats.
 
+## Screenshots
+<img width="945" height="1022" alt="image" src="https://github.com/user-attachments/assets/1af07966-45f2-40d5-93c2-b7cbdf01f323" />
+
+## (WHAT A HEEEEEEEEEEL GOOFY AHH PLAYER LOL)
+
 ## Features
 
 - Supports multiple audio formats (MP3, WAV, FLAC, OGG, etc.)
