@@ -18,7 +18,7 @@ A modern GUI audio player written in Python that supports various audio formats.
 
 ```bash
 # Install from source
-git clone https://github.com/yourusername/dolboebify.git
+git clone https://github.com/relaxxx89/dolboebify.git
 cd dolboebify
 pip install -e .
 
