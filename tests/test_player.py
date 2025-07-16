@@ -88,4 +88,4 @@ class TestPlayer:
 
         player.clear_playlist()
         assert player.playlist == []
-        assert player.current_index == -1 
+        assert player.current_index == -1

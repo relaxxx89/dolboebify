@@ -22,4 +22,4 @@ class PlaybackError(DolboebifyError):
 class PlaylistError(DolboebifyError):
     """Raised when there is an error with playlist operations."""
 
-    pass 
+    pass

@@ -41,7 +41,9 @@ class CLIApp:
             expand=True,
         )
 
-    def _create_playback_info_panel(self, track_title: str, position: int, duration: int) -> Panel:
+    def _create_playback_info_panel(
+        self, track_title: str, position: int, duration: int
+    ) -> Panel:
         """Create a panel with playback information."""
         table = Table.grid(expand=True)
 
@@ -85,7 +87,9 @@ class CLIApp:
             if self.player.play(self.player.playlist[0]["path"]):
                 self._run_player_interface()
         else:
-            self.console.print(f"[red]No supported audio files found in {directory}[/red]")
+            self.console.print(
+                f"[red]No supported audio files found in {directory}[/red]"
+            )
 
     def _run_player_interface(self):
         """Run the interactive player interface."""
@@ -125,7 +129,7 @@ class CLIApp:
 @click.version_option()
 def cli(cli: bool, gui: bool):
     """Dolboebify - A modern audio player.
-    
+
     Run with '--gui' flag to start in GUI mode.
     """
     # Handle GUI flag
@@ -154,7 +158,9 @@ def play(file_path: Optional[str] = None):
 
 
 @cli.command()
-@click.argument("directory", type=click.Path(exists=True, file_okay=False, dir_okay=True))
+@click.argument(
+    "directory", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+)
 def playlist(directory: str):
     """Play all audio files in a directory as a playlist."""
     app = CLIApp()
@@ -163,4 +169,4 @@ def playlist(directory: str):
 
 def main():
     """Entry point for the application."""
-    cli() 
+    cli()

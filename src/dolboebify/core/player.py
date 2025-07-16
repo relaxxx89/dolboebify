@@ -100,13 +100,13 @@ class Player:
     def load(self, file_path: Union[str, Path]) -> bool:
         """
         Load an audio file.
-        
+
         Args:
             file_path: Path to the audio file
-            
+
         Returns:
             bool: True if successful, False otherwise
-            
+
         Raises:
             AudioFormatNotSupportedError: If the audio format is not supported
             FileNotFoundError: If the file does not exist
@@ -136,10 +136,10 @@ class Player:
     def play(self, file_path: Optional[Union[str, Path]] = None) -> bool:
         """
         Play an audio file. If file_path is None, resume current track.
-        
+
         Args:
             file_path: Path to the audio file (optional)
-            
+
         Returns:
             bool: True if successful, False otherwise
         """
@@ -218,10 +218,10 @@ class Player:
     def load_playlist(self, directory: Union[str, Path]) -> int:
         """
         Load all supported audio files from a directory into the playlist.
-        
+
         Args:
             directory: Path to directory
-            
+
         Returns:
             int: Number of tracks added
         """
@@ -236,4 +236,4 @@ class Player:
                 if self.add_to_playlist(file_path):
                     count += 1
 
-        return count 
+        return count

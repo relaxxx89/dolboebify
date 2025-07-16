@@ -14,4 +14,4 @@ if __name__ == "__main__":
         sys.exit(app.run())
     else:
         # Default to CLI mode
-        cli_main() 
+        cli_main()

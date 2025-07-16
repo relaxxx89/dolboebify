@@ -220,7 +220,9 @@ class PlayerWindow(QMainWindow):
                 self.player.add_to_playlist(file_path)
                 self.update_playlist()
                 self.player.play(file_path)
-                self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+                self.play_button.setIcon(
+                    self.style().standardIcon(QStyle.SP_MediaPause)
+                )
             except (FileNotFoundError, AudioFormatNotSupportedError) as e:
                 self.now_playing_label.setText(f"Error: {str(e)}")
 
@@ -242,9 +244,13 @@ class PlayerWindow(QMainWindow):
             if count > 0:
                 self.update_playlist()
                 self.player.play(self.player.playlist[0]["path"])
-                self.play_button.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+                self.play_button.setIcon(
+                    self.style().standardIcon(QStyle.SP_MediaPause)
+                )
             else:
-                self.now_playing_label.setText("No supported audio files found in directory")
+                self.now_playing_label.setText(
+                    "No supported audio files found in directory"
+                )
 
     def update_playlist(self):
         """Update the playlist widget with tracks from player's playlist."""
@@ -281,4 +287,4 @@ class GUIApp:
 
     def run(self):
         """Run the application."""
-        return self.app.exec_() 
+        return self.app.exec_()
