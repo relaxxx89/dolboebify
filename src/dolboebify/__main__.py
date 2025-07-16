@@ -1,6 +1,7 @@
 """Entry point for the Dolboebify audio player."""
 
 import sys
+
 from dolboebify.ui.cli import main as cli_main
 
 if __name__ == "__main__":

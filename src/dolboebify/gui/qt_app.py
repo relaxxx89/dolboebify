@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from PyQt5.QtCore import QDir, QTime, Qt, QTimer, QUrl, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtCore import QDir, Qt, QTime, QTimer, QUrl, pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
     QApplication,
     QFileDialog,
