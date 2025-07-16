@@ -2,4 +2,4 @@
 
 from dolboebify.gui.qt_app import GUIApp
 
-__all__ = ['GUIApp'] 
+__all__ = ["GUIApp"] 

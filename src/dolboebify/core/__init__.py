@@ -2,4 +2,4 @@
 
 from dolboebify.core.player import Player
 
-__all__ = ['Player'] 
+__all__ = ["Player"] 
