@@ -167,12 +167,10 @@ class PlayerWindow(QMainWindow):
 
             # Update track info
             if self.player.playlist and self.player.current_index >= 0:
-                track_title = (
-                    self.player.playlist[self.player.current_index]["title"]
-                )
-                self.now_playing_label.setText(
-                    f"Now Playing: {track_title}"
-                )
+                track_title = self.player.playlist[self.player.current_index][
+                    "title"
+                ]
+                self.now_playing_label.setText(f"Now Playing: {track_title}")
 
     @pyqtSlot(int)
     def set_position(self, position: int):

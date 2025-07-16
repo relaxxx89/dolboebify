@@ -48,8 +48,7 @@ class CLIApp:
 
         # Add track info
         table.add_row(
-            f"[yellow]Now Playing:[/yellow] "
-            f"[green]{track_title}[/green]"
+            f"[yellow]Now Playing:[/yellow] " f"[green]{track_title}[/green]"
         )
 
         # Add progress bar
