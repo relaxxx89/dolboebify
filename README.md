@@ -1,6 +1,6 @@
 # Dolboebify
 
-A modern audio player written in Python that supports various audio formats.
+A modern GUI audio player written in Python that supports various audio formats.
 
 ## Screenshots
 <img width="945" height="1022" alt="image" src="https://github.com/user-attachments/assets/1af07966-45f2-40d5-93c2-b7cbdf01f323" />
@@ -10,8 +10,7 @@ A modern audio player written in Python that supports various audio formats.
 ## Features
 
 - Supports multiple audio formats (MP3, WAV, FLAC, OGG, etc.)
-- Simple and intuitive interface
-- Both command-line (CLI) and graphical (GUI) interfaces
+- Simple and intuitive graphical interface
 - Playlist management
 - Volume control and audio visualization
 
@@ -29,28 +28,12 @@ pip install dolboebify
 
 ## Usage
 
-### Command-Line Interface (CLI)
-
 ```bash
-# Start the player in CLI mode (default)
+# Start the player
 dolboebify
-dolboebify --cli
-
-# Play a specific file
-dolboebify play /path/to/audio/file.mp3
-
-# Create and play a playlist
-dolboebify playlist /path/to/playlist/directory
-```
-
-### Graphical Interface (GUI)
-
-```bash
-# Start the player with GUI
-dolboebify --gui
 
 # You can also use Python directly
-python -m dolboebify --gui
+python -m dolboebify
 ```
 
 ## Dependencies
@@ -58,8 +41,6 @@ python -m dolboebify --gui
 - python-vlc - Core audio playback
 - pygame - Audio processing
 - pydub - Audio file handling
-- click - Command line interface
-- rich - Terminal UI
 - PyQt5 - Graphical user interface
 
 ## Development
