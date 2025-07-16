@@ -38,26 +38,26 @@ class CLIApp:
             TextColumn("{task.description}"),
             BarColumn(bar_width=None),
             TextColumn("[green]{task.percentage:.0f}%"),
-            expand=True
+            expand=True,
         )
 
     def _create_playback_info_panel(self, track_title: str, position: int, duration: int) -> Panel:
         """Create a panel with playback information."""
         table = Table.grid(expand=True)
-        
+
         # Add track info
         table.add_row(f"[yellow]Now Playing:[/yellow] [green]{track_title}[/green]")
-        
+
         # Add progress bar
         progress = self._create_progress_bar()
         task_id = progress.add_task(
             f"{self._format_time(position)} / {self._format_time(duration)}",
             total=100,
-            completed=int(self.player.position_percent)
+            completed=int(self.player.position_percent),
         )
-        
+
         table.add_row(progress)
-        
+
         # Add controls info
         controls = (
             "[bold]Controls:[/bold] "
@@ -67,7 +67,7 @@ class CLIApp:
             "[blue]Q[/blue]=Quit"
         )
         table.add_row(controls)
-        
+
         return Panel(table, title="Dolboebify Player", border_style="green")
 
     def play_file(self, file_path: str):
@@ -82,7 +82,7 @@ class CLIApp:
         count = self.player.load_playlist(directory)
         if count > 0:
             self.console.print(f"[green]Loaded {count} tracks from {directory}[/green]")
-            if self.player.play(self.player.playlist[0]['path']):
+            if self.player.play(self.player.playlist[0]["path"]):
                 self._run_player_interface()
         else:
             self.console.print(f"[red]No supported audio files found in {directory}[/red]")
@@ -90,7 +90,7 @@ class CLIApp:
     def _run_player_interface(self):
         """Run the interactive player interface."""
         self.is_running = True
-        
+
         with Live(auto_refresh=False) as live:
             while self.is_running and self.player.current_media:
                 if not self.player.is_playing and not self.player.is_paused:
@@ -99,29 +99,29 @@ class CLIApp:
                         # No more tracks or error
                         self.is_running = False
                         break
-                
+
                 track_title = (
-                    self.player.playlist[self.player.current_index]['title']
+                    self.player.playlist[self.player.current_index]["title"]
                     if self.player.playlist and self.player.current_index >= 0
                     else Path(self.player.current_media.get_mrl()).stem
                 )
-                
+
                 # Update display
                 panel = self._create_playback_info_panel(
                     track_title,
                     self.player.position,
-                    self.player.duration
+                    self.player.duration,
                 )
-                
+
                 live.update(panel, refresh=True)
-                
+
                 # Sleep to reduce CPU usage
                 time.sleep(0.1)
 
 
 @click.group()
-@click.option('--cli', is_flag=True, help="Force CLI mode (default)")
-@click.option('--gui', is_flag=True, help="Use GUI mode instead of CLI")
+@click.option("--cli", is_flag=True, help="Force CLI mode (default)")
+@click.option("--gui", is_flag=True, help="Use GUI mode instead of CLI")
 @click.version_option()
 def cli(cli: bool, gui: bool):
     """Dolboebify - A modern audio player.
@@ -133,6 +133,7 @@ def cli(cli: bool, gui: bool):
         # Import and start the GUI
         try:
             from dolboebify.gui import GUIApp
+
             app = GUIApp()
             sys.exit(app.run())
         except ImportError:
@@ -141,11 +142,11 @@ def cli(cli: bool, gui: bool):
 
 
 @cli.command()
-@click.argument('file_path', type=click.Path(exists=True), required=False)
+@click.argument("file_path", type=click.Path(exists=True), required=False)
 def play(file_path: Optional[str] = None):
     """Play an audio file or start interactive mode."""
     app = CLIApp()
-    
+
     if file_path:
         app.play_file(file_path)
     else:
@@ -153,7 +154,7 @@ def play(file_path: Optional[str] = None):
 
 
 @cli.command()
-@click.argument('directory', type=click.Path(exists=True, file_okay=False, dir_okay=True))
+@click.argument("directory", type=click.Path(exists=True, file_okay=False, dir_okay=True))
 def playlist(directory: str):
     """Play all audio files in a directory as a playlist."""
     app = CLIApp()
@@ -162,8 +163,4 @@ def playlist(directory: str):
 
 def main():
     """Entry point for the application."""
-    cli()
-
-
-if __name__ == '__main__':
-    main() 
+    cli() 

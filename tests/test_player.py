@@ -17,7 +17,7 @@ class TestPlayer:
     @pytest.fixture
     def player(self):
         """Fixture to create a Player instance."""
-        with mock.patch('vlc.Instance'):
+        with mock.patch("vlc.Instance"):
             player = Player()
             yield player
 
@@ -48,44 +48,44 @@ class TestPlayer:
         assert player._is_format_supported("file.txt") is False
         assert player._is_format_supported("file.xyz") is False
 
-    @mock.patch('pathlib.Path.exists')
+    @mock.patch("pathlib.Path.exists")
     def test_load_nonexistent_file(self, mock_exists, player):
         """Test loading a file that doesn't exist."""
         mock_exists.return_value = False
         with pytest.raises(FileNotFoundError):
             player.load("nonexistent_file.mp3")
 
-    @mock.patch('pathlib.Path.exists')
+    @mock.patch("pathlib.Path.exists")
     def test_load_unsupported_format(self, mock_exists, player):
         """Test loading a file with unsupported format."""
         mock_exists.return_value = True
         with pytest.raises(AudioFormatNotSupportedError):
             player.load("file.xyz")
 
-    @mock.patch('pathlib.Path.exists')
+    @mock.patch("pathlib.Path.exists")
     def test_add_to_playlist(self, mock_exists, player):
         """Test adding a track to the playlist."""
         mock_exists.return_value = True
-        
+
         # Mock the format check
         player._is_format_supported = mock.MagicMock(return_value=True)
-        
+
         result = player.add_to_playlist("track.mp3")
         assert result is True
         assert len(player.playlist) == 1
-        assert player.playlist[0]['path'] == "track.mp3"
+        assert player.playlist[0]["path"] == "track.mp3"
         assert player.current_index == 0
 
     def test_clear_playlist(self, player):
         """Test clearing the playlist."""
         # Set up a playlist first
-        with mock.patch('pathlib.Path.exists', return_value=True):
+        with mock.patch("pathlib.Path.exists", return_value=True):
             player._is_format_supported = mock.MagicMock(return_value=True)
             player.add_to_playlist("track1.mp3")
             player.add_to_playlist("track2.mp3")
-        
+
         assert len(player.playlist) == 2
-        
+
         player.clear_playlist()
         assert player.playlist == []
         assert player.current_index == -1 
