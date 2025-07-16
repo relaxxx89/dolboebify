@@ -15,20 +15,12 @@ class Player:
 
     # Supported audio formats
     SUPPORTED_FORMATS = [
-        "mp3",
-        "wav",
-        "ogg",
-        "flac",
-        "aac",
-        "wma",
-        "m4a",
-        "aiff",
-        "alac",
+        "mp3", "wav", "ogg", "flac", "aac", "wma", "m4a", "aiff", "alac"
     ]
 
     def __init__(self):
         """Initialize the player."""
-        self.instance = vlc.Instance("--no-xlib")
+        self.instance = vlc.Instance('--no-xlib')
         self.media_player = self.instance.media_player_new()
         self.current_media = None
         self.playlist: List[Dict[str, str]] = []
@@ -112,25 +104,25 @@ class Player:
             FileNotFoundError: If the file does not exist
         """
         path = Path(file_path)
-
+        
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path}")
-
+            
         if not self._is_format_supported(path):
             raise AudioFormatNotSupportedError(
                 f"Format not supported: {path.suffix[1:]}. "
                 f"Supported formats: {', '.join(self.SUPPORTED_FORMATS)}"
             )
-
+            
         # Create a VLC media object
         media = self.instance.media_new(str(path.absolute()))
         self.media_player.set_media(media)
         self.current_media = media
-
+        
         # Parse media info
         media.parse()
         self._duration = media.get_duration()
-
+        
         return True
 
     def play(self, file_path: Optional[Union[str, Path]] = None) -> bool:
@@ -149,7 +141,7 @@ class Player:
             except (FileNotFoundError, AudioFormatNotSupportedError) as e:
                 print(f"Error loading file: {e}")
                 return False
-
+                
         result = self.media_player.play()
         self._paused = False
         return result == 0
@@ -168,46 +160,46 @@ class Player:
         """Play the next track in the playlist."""
         if not self.playlist or self.current_index >= len(self.playlist) - 1:
             return False
-
+            
         self.current_index += 1
         track = self.playlist[self.current_index]
-        return self.play(track["path"])
+        return self.play(track['path'])
 
     def previous_track(self) -> bool:
         """Play the previous track in the playlist."""
         if not self.playlist or self.current_index <= 0:
             return False
-
+            
         self.current_index -= 1
         track = self.playlist[self.current_index]
-        return self.play(track["path"])
+        return self.play(track['path'])
 
     def add_to_playlist(self, file_path: Union[str, Path]) -> bool:
         """Add a track to the playlist."""
         path = Path(file_path)
-
+        
         if not path.exists():
             print(f"File not found: {path}")
             return False
-
+            
         if not self._is_format_supported(path):
             print(f"Format not supported: {path.suffix[1:]}")
             return False
-
+            
         # Extract metadata if possible
         title = path.stem
-
+        
         track = {
-            "path": str(path),
-            "title": title,
+            'path': str(path),
+            'title': title,
         }
-
+        
         self.playlist.append(track)
-
+        
         # If this is the first track added, set the current index
         if len(self.playlist) == 1:
             self.current_index = 0
-
+            
         return True
 
     def clear_playlist(self):
@@ -229,11 +221,11 @@ class Player:
         if not path.exists() or not path.is_dir():
             print(f"Directory not found: {path}")
             return 0
-
+            
         count = 0
-        for file_path in path.glob("**/*"):
+        for file_path in path.glob('**/*'):
             if file_path.is_file() and self._is_format_supported(file_path):
                 if self.add_to_playlist(file_path):
                     count += 1
-
+                    
         return count 
