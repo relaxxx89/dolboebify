@@ -10,9 +10,9 @@ from dolboebify.utils.coverart import (
     fetch_cover_art,
     fetch_from_itunes,
     fetch_from_lastfm,
+    get_cached_cover,
     parse_track_info,
     sanitize_filename,
-    get_cached_cover,
     save_to_cache,
 )
 
