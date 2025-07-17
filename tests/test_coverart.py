@@ -90,7 +90,7 @@ class TestCoverArtFetching:
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "resultCount": 1,
-            "results": [{"artworkUrl100": "https://example.com/artwork.jpg"}],
+            "results": [{"artworkUrl100": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/b4/7a/aa/b47aaad3-7764-1d69-1f18-5bc66fe0c946/21UMGIM09915.rgb.jpg/100x100bb.jpg"}],
         }
 
         # Mock the image download
@@ -130,15 +130,15 @@ class TestCoverArtFetching:
                     "image": [
                         {"#text": "", "size": "small"},
                         {
-                            "#text": "https://example.com/image-medium.jpg",
+                            "#text": "https://lastfm.freetls.fastly.net/i/u/64s/2a96cbd8b46e442fc41c2b86b821562f.jpg",
                             "size": "medium",
                         },
                         {
-                            "#text": "https://example.com/image-large.jpg",
+                            "#text": "https://lastfm.freetls.fastly.net/i/u/174s/2a96cbd8b46e442fc41c2b86b821562f.jpg",
                             "size": "large",
                         },
                         {
-                            "#text": "https://example.com/image-extralarge.jpg",
+                            "#text": "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.jpg",
                             "size": "extralarge",
                         },
                     ]
