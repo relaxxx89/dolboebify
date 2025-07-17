@@ -1,4 +1,3 @@
-# main.py
 """
 Dolboebify 2.0 – futuristic dark-neon MP3 player че гпт пишет вообще
 футуристик куда там
@@ -7,6 +6,7 @@ Requires:  pacman -S python-pyqt5 python-pygame
 
 import sys
 from pathlib import Path
+
 import pygame
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
 from PyQt5.QtGui import QFont, QPixmap
@@ -20,9 +20,9 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QPushButton,
     QSlider,
+    QStyle,
     QVBoxLayout,
     QWidget,
-    QStyle,
 )
 
 
