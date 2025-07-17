@@ -48,6 +48,11 @@ def parse_track_info(filename: str) -> Tuple[str, str]:
         if match:
             artist = match.group(1).strip()
             title = match.group(2).strip()
+
+            # Strip trailing underscores if they exist (for Artist_-_Title format)
+            if pattern.endswith("_-_(.+)$"):
+                artist = artist.rstrip("_")
+
             return artist, title
 
     # If no pattern matches, use the whole name as title and empty string as artist
@@ -193,7 +198,7 @@ def fetch_from_itunes(artist: str, title: str) -> Optional[str]:
             artwork_url = artwork_url.replace("100x100", "600x600")
 
             # Download the image
-            img_response = requests.get(artwork_url, timeout=timeout)
+            img_response = requests.get(url=artwork_url, timeout=timeout)
             if img_response.status_code == 200:
                 return save_to_cache(artist, title, img_response.content)
 
