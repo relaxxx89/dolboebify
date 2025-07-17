@@ -1,6 +1,7 @@
 # main.py
 """
-Dolboebify 2.0 – futuristic dark-neon MP3 player че гпт пишет вообще футуристик куда там
+Dolboebify 2.0 – futuristic dark-neon MP3 player че гпт пишет вообще
+футуристик куда там
 Requires:  pacman -S python-pyqt5 python-pygame
 """
 
@@ -10,10 +11,20 @@ import pygame
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import (
-    QApplication, QFileDialog, QHBoxLayout, QLabel, QListWidget,
-    QListWidgetItem, QMainWindow, QPushButton, QSlider,
-    QVBoxLayout, QWidget, QStyle
+    QApplication,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QMainWindow,
+    QPushButton,
+    QSlider,
+    QVBoxLayout,
+    QWidget,
+    QStyle,
 )
+
 
 # ---------- TinyBackend ----------
 class TinyBackend:
@@ -34,7 +45,15 @@ class TinyBackend:
 
     def load_playlist(self, folder: str) -> int:
         folder = Path(folder)
-        exts = ("*.mp3", "*.flac", "*.wav", "*.ogg", "*.m4a", "*.aac", "*.opus")
+        exts = (
+            "*.mp3",
+            "*.flac",
+            "*.wav",
+            "*.ogg",
+            "*.m4a",
+            "*.aac",
+            "*.opus",
+        )
         files = [f for ext in exts for f in folder.rglob(ext)]
         for f in files:
             self.add_to_playlist(str(f))
@@ -47,14 +66,24 @@ class TinyBackend:
         self._idx = idx
         pygame.mixer.music.load(self._playlist[idx]["path"])
         pygame.mixer.music.play()
-        self._duration = pygame.mixer.Sound(self._playlist[idx]["path"]).get_length()
+        self._duration = pygame.mixer.Sound(
+            self._playlist[idx]["path"]
+        ).get_length()
 
     def play(self, path=None):
         if path is None:
             self.play_index(self._idx)
         else:
-            self.play_index(next((i for i, t in enumerate(self._playlist)
-                                 if t["path"] == str(path)), 0))
+            self.play_index(
+                next(
+                    (
+                        i
+                        for i, t in enumerate(self._playlist)
+                        if t["path"] == str(path)
+                    ),
+                    0,
+                )
+            )
 
     def pause(self):
         pygame.mixer.music.pause()
@@ -102,11 +131,16 @@ class TinyBackend:
 
     @property
     def current_media(self):
-        return self._playlist[self._idx]["path"] if 0 <= self._idx < len(self._playlist) else None
+        return (
+            self._playlist[self._idx]["path"]
+            if 0 <= self._idx < len(self._playlist)
+            else None
+        )
 
     @property
     def playlist(self):
         return self._playlist
+
 
 # ---------- neon style ----------
 DARK_STYLE = """
@@ -233,10 +267,11 @@ class PlayerWindow(QMainWindow):
         ctrl.setSpacing(8)
         btn_size = 36
         for name, icon, slot in (
-                ("prev", "SP_MediaSkipBackward", self.previous_track),
-                ("play", "SP_MediaPlay",        self.toggle_play),
-                ("stop", "SP_MediaStop",        self.stop),
-                ("next", "SP_MediaSkipForward", self.next_track)):
+            ("prev", "SP_MediaSkipBackward", self.previous_track),
+            ("play", "SP_MediaPlay", self.toggle_play),
+            ("stop", "SP_MediaStop", self.stop),
+            ("next", "SP_MediaSkipForward", self.next_track),
+        ):
             btn = QPushButton()
             btn.setFixedSize(btn_size, btn_size)
             btn.setIcon(self.style().standardIcon(getattr(QStyle, icon)))
@@ -283,7 +318,7 @@ class PlayerWindow(QMainWindow):
     # ---------- Helpers ----------
     def format_time(self, sec):
         s = int(sec)
-        return f"{s//60:02d}:{s%60:02d}"
+        return f"{s//60:02d}:{s % 60:02d}"
 
     def _load_cover(self, path):
         for name in ("cover.jpg", "folder.jpg", "front.jpg"):
@@ -312,7 +347,11 @@ class PlayerWindow(QMainWindow):
 
     @pyqtSlot()
     def _sync_play_icon(self):
-        icon = QStyle.SP_MediaPause if self.player.is_playing else QStyle.SP_MediaPlay
+        icon = (
+            QStyle.SP_MediaPause
+            if self.player.is_playing
+            else QStyle.SP_MediaPlay
+        )
         self.play_btn.setIcon(self.style().standardIcon(icon))
 
     @pyqtSlot(int)
@@ -353,8 +392,11 @@ class PlayerWindow(QMainWindow):
     @pyqtSlot()
     def open_file(self):
         files, _ = QFileDialog.getOpenFileNames(
-            self, "Open audio", str(Path.home()),
-            "Audio (*.mp3 *.wav *.ogg *.flac *.m4a *.aac *.opus)")
+            self,
+            "Open audio",
+            str(Path.home()),
+            "Audio (*.mp3 *.wav *.ogg *.flac *.m4a *.aac *.opus)",
+        )
         if not files:
             return
         self.player.clear_playlist()
