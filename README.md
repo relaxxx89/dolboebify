@@ -34,11 +34,19 @@ pip install -e .
 
 ### On Arch Linux
 
-Install isolated with `pipx`:
+> **Note:** There are no official `pacman` or AUR packages available.
+
+Install and uninstall using `pipx`:
 
 ```bash
-sudo pacman -S python-pipx        # if you don't have pipx
+# Ensure pipx is installed
+sudo pacman -S python-pipx
+
+# Install Dolboebify
 pipx install dolboebify
+
+# Uninstall Dolboebify
+pipx uninstall dolboebify
 ```
 
 ### On other Linux distributions
@@ -100,12 +108,10 @@ player.remove_track_image("path/to/track.mp3")
 
 ### On Arch Linux
 
-If installed from the official repos or AUR:
+Use `pipx`:
 
 ```bash
-sudo pacman -R dolboebify
-# or if using an AUR helper, e.g.
-yay -R dolboebify
+pipx uninstall dolboebify
 ```
 
 ### On Windows
