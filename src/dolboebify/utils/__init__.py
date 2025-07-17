@@ -1,6 +1,9 @@
 """Utility modules for the Dolboebify audio player."""
 
-from dolboebify.utils.cleanup import clear_cover_cache, reset_failed_fetch_cache
+from dolboebify.utils.cleanup import (
+    clear_cover_cache,
+    reset_failed_fetch_cache,
+)
 from dolboebify.utils.config import get_config, get_setting
 from dolboebify.utils.coverart import fetch_cover_art
 from dolboebify.utils.exceptions import (
