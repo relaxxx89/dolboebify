@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [ main, master, develop, python-dev ]
+    branches: [ main, master, develop, python-dev, front, back]
   pull_request:
     branches: [ main, master ]
 
