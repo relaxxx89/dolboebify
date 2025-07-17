@@ -1,10 +1,15 @@
-"""PyQt5 GUI implementation for the Dolboebify audio player."""
+"""
+Dolboebify 2.0 – futuristic dark-neon MP3 player че гпт пишет вообще
+футуристик куда там
+Requires:  pacman -S python-pyqt5 python-pygame
+"""
 
 import sys
 from pathlib import Path
 
+import pygame
 from PyQt5.QtCore import Qt, QTimer, pyqtSlot
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -20,298 +25,409 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from dolboebify.core import Player
-from dolboebify.utils.exceptions import AudioFormatNotSupportedError
+
+# ---------- TinyBackend ----------
+class TinyBackend:
+    def __init__(self):
+        pygame.mixer.init()
+        self._playlist = []
+        self._idx = -1
+        self._vol = 0.5
+        self._duration = 0
+
+    # playlist
+    def clear_playlist(self):
+        self._playlist.clear()
+        self._idx = -1
+
+    def add_to_playlist(self, path):
+        self._playlist.append({"path": str(path), "title": Path(path).stem})
+
+    def load_playlist(self, folder: str) -> int:
+        folder = Path(folder)
+        exts = (
+            "*.mp3",
+            "*.flac",
+            "*.wav",
+            "*.ogg",
+            "*.m4a",
+            "*.aac",
+            "*.opus",
+        )
+        files = [f for ext in exts for f in folder.rglob(ext)]
+        for f in files:
+            self.add_to_playlist(str(f))
+        return len(files)
+
+    # playback
+    def play_index(self, idx):
+        if not (0 <= idx < len(self._playlist)):
+            return
+        self._idx = idx
+        pygame.mixer.music.load(self._playlist[idx]["path"])
+        pygame.mixer.music.play()
+        self._duration = pygame.mixer.Sound(
+            self._playlist[idx]["path"]
+        ).get_length()
+
+    def play(self, path=None):
+        if path is None:
+            self.play_index(self._idx)
+        else:
+            self.play_index(
+                next(
+                    (
+                        i
+                        for i, t in enumerate(self._playlist)
+                        if t["path"] == str(path)
+                    ),
+                    0,
+                )
+            )
+
+    def pause(self):
+        pygame.mixer.music.pause()
+
+    def stop(self):
+        pygame.mixer.music.stop()
+
+    def previous_track(self):
+        if not self._playlist:
+            return False
+        self.play_index((self._idx - 1) % len(self._playlist))
+        return True
+
+    def next_track(self):
+        if not self._playlist:
+            return False
+        self.play_index((self._idx + 1) % len(self._playlist))
+        return True
+
+    # volume
+    @property
+    def volume(self):
+        return int(self._vol * 100)
+
+    def set_volume(self, v):
+        self._vol = max(0, min(v / 100, 1))
+        pygame.mixer.music.set_volume(self._vol)
+
+    # position
+    @property
+    def position(self):
+        return pygame.mixer.music.get_pos() / 1000
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @property
+    def is_playing(self):
+        return pygame.mixer.music.get_busy()
+
+    @property
+    def current_index(self):
+        return self._idx
+
+    @property
+    def current_media(self):
+        return (
+            self._playlist[self._idx]["path"]
+            if 0 <= self._idx < len(self._playlist)
+            else None
+        )
+
+    @property
+    def playlist(self):
+        return self._playlist
+
+
+# ---------- neon style ----------
+DARK_STYLE = """
+/* Main window */
+QMainWindow {
+    background-color: #0d0d0d;
+}
+
+QLabel {
+    color: #ffffff;
+    font-family: "Segoe UI", Roboto, Oxygen, Ubuntu;
+}
+
+/* Buttons */
+QPushButton {
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #ffffff;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #bb00ff, stop:1 #00aaff);
+    font-size: 13px;
+}
+QPushButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #cc22ff, stop:1 #22bbff);
+}
+QPushButton:pressed {
+    background-color: #0a0a0a;
+}
+
+/* Sliders */
+QSlider::groove:horizontal {
+    height: 4px;
+    background: #222;
+    border-radius: 2px;
+}
+QSlider::handle:horizontal {
+    width: 14px;
+    height: 14px;
+    margin: -5px 0;
+    border-radius: 7px;
+    background: #00ffff;
+}
+QSlider::sub-page:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+        stop:0 #bb00ff, stop:1 #00aaff);
+    border-radius: 2px;
+}
+
+/* Playlist */
+QListWidget {
+    background-color: #111;
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    outline: 0;
+}
+QListWidget::item {
+    padding: 6px;
+}
+QListWidget::item:selected {
+    background-color: rgba(0, 255, 255, 100);
+}
+"""
 
 
 class PlayerWindow(QMainWindow):
-    """Main window for the Dolboebify GUI player."""
-
     def __init__(self):
-        """Initialize the player window."""
         super().__init__()
+        self.player = TinyBackend()
+        self.setWindowTitle("Dolboebify 2.0")
+        self.setGeometry(200, 150, 820, 640)
+        self.setStyleSheet(DARK_STYLE)
 
-        # Set up the player
-        self.player = Player()
+        # fallback cover
+        self.unknown_cover = QPixmap(200, 200)
+        self.unknown_cover.fill(Qt.darkGray)
 
-        # Setup UI
-        self.setWindowTitle("Dolboebify")
-        self.setGeometry(100, 100, 800, 600)
         self.setup_ui()
-
-        # Setup timers for updating position
-        self.position_timer = QTimer()
-        self.position_timer.setInterval(1000)
-        self.position_timer.timeout.connect(self.update_position)
-        self.position_timer.start()
-
+        self.setup_timers()
         self.show()
 
+    # ---------- UI ----------
     def setup_ui(self):
-        """Set up the user interface."""
-        # Create central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        central = QWidget()
+        self.setCentralWidget(central)
+        main = QVBoxLayout(central)
+        main.setContentsMargins(12, 12, 12, 12)
+        main.setSpacing(10)
 
-        # Main layout
-        main_layout = QVBoxLayout()
-        central_widget.setLayout(main_layout)
+        # cover label
+        self.cover_lbl = QLabel()
+        self.cover_lbl.setFixedSize(200, 200)
+        self.cover_lbl.setScaledContents(True)
+        self.cover_lbl.setAlignment(Qt.AlignCenter)
+        self.cover_lbl.setPixmap(self.unknown_cover)
+        main.addWidget(self.cover_lbl, alignment=Qt.AlignHCenter)
 
-        # Now playing label
-        self.now_playing_label = QLabel("No track playing")
-        self.now_playing_label.setAlignment(Qt.AlignCenter)
-        self.now_playing_label.setFont(QFont("Arial", 12, QFont.Bold))
-        main_layout.addWidget(self.now_playing_label)
+        # track title
+        self.track_lbl = QLabel("Nothing playing")
+        self.track_lbl.setAlignment(Qt.AlignCenter)
+        f = QFont("Segoe UI", 14, QFont.Bold)
+        self.track_lbl.setFont(f)
+        main.addWidget(self.track_lbl)
 
-        # Time display
-        time_layout = QHBoxLayout()
-        self.current_time_label = QLabel("00:00")
-        self.total_time_label = QLabel("00:00")
-        time_layout.addWidget(self.current_time_label)
-        time_layout.addStretch()
-        time_layout.addWidget(self.total_time_label)
-        main_layout.addLayout(time_layout)
+        # time row
+        time_row = QHBoxLayout()
+        self.cur_lbl = QLabel("00:00")
+        self.tot_lbl = QLabel("00:00")
+        time_row.addWidget(self.cur_lbl)
+        time_row.addStretch()
+        time_row.addWidget(self.tot_lbl)
+        main.addLayout(time_row)
 
-        # Progress slider
-        self.progress_slider = QSlider(Qt.Horizontal)
-        self.progress_slider.setRange(0, 100)
-        self.progress_slider.sliderMoved.connect(self.set_position)
-        main_layout.addWidget(self.progress_slider)
+        # progress slider
+        self.progress = QSlider(Qt.Horizontal)
+        self.progress.setRange(0, 1000)
+        self.progress.sliderMoved.connect(self._seek)
+        main.addWidget(self.progress)
 
-        # Control buttons
-        controls_layout = QHBoxLayout()
+        # controls row
+        ctrl = QHBoxLayout()
+        ctrl.setSpacing(8)
+        btn_size = 36
+        for name, icon, slot in (
+            ("prev", "SP_MediaSkipBackward", self.previous_track),
+            ("play", "SP_MediaPlay", self.toggle_play),
+            ("stop", "SP_MediaStop", self.stop),
+            ("next", "SP_MediaSkipForward", self.next_track),
+        ):
+            btn = QPushButton()
+            btn.setFixedSize(btn_size, btn_size)
+            btn.setIcon(self.style().standardIcon(getattr(QStyle, icon)))
+            btn.clicked.connect(slot)
+            setattr(self, name + "_btn", btn)
+            ctrl.addWidget(btn)
 
-        self.play_button = QPushButton()
-        self.play_button.setIcon(
-            self.style().standardIcon(QStyle.SP_MediaPlay)
-        )
-        self.play_button.clicked.connect(self.toggle_playback)
+        ctrl.addStretch()
+        open_btn = QPushButton("Open File")
+        open_btn.setMinimumHeight(28)
+        open_btn.clicked.connect(self.open_file)
+        ctrl.addWidget(open_btn)
 
-        self.prev_button = QPushButton()
-        self.prev_button.setIcon(
-            self.style().standardIcon(QStyle.SP_MediaSkipBackward)
-        )
-        self.prev_button.clicked.connect(self.previous_track)
+        main.addLayout(ctrl)
 
-        self.next_button = QPushButton()
-        self.next_button.setIcon(
-            self.style().standardIcon(QStyle.SP_MediaSkipForward)
-        )
-        self.next_button.clicked.connect(self.next_track)
+        # volume
+        vol_box = QHBoxLayout()
+        vol_box.addWidget(QLabel("Vol"))
+        self.vol_slider = QSlider(Qt.Horizontal)
+        self.vol_slider.setRange(0, 100)
+        self.vol_slider.setValue(self.player.volume)
+        self.vol_slider.valueChanged.connect(self.set_volume)
+        vol_box.addWidget(self.vol_slider)
+        self.vol_lbl = QLabel(str(self.player.volume))
+        vol_box.addWidget(self.vol_lbl)
+        main.addLayout(vol_box)
 
-        self.stop_button = QPushButton()
-        self.stop_button.setIcon(
-            self.style().standardIcon(QStyle.SP_MediaStop)
-        )
-        self.stop_button.clicked.connect(self.stop)
+        # playlist
+        lbl = QLabel("Playlist")
+        lbl.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        main.addWidget(lbl)
 
-        self.open_file_button = QPushButton("Open File")
-        self.open_file_button.clicked.connect(self.open_file)
+        self.playlist = QListWidget()
+        self.playlist.itemDoubleClicked.connect(self._play_item)
+        main.addWidget(self.playlist)
 
-        self.open_folder_button = QPushButton("Open Folder")
-        self.open_folder_button.clicked.connect(self.open_folder)
+    # ---------- Timers ----------
+    def setup_timers(self):
+        self.timer = QTimer(self)
+        self.timer.setInterval(500)
+        self.timer.timeout.connect(self.update_ui)
+        self.timer.start()
 
-        controls_layout.addWidget(self.prev_button)
-        controls_layout.addWidget(self.play_button)
-        controls_layout.addWidget(self.stop_button)
-        controls_layout.addWidget(self.next_button)
-        controls_layout.addWidget(self.open_file_button)
-        controls_layout.addWidget(self.open_folder_button)
+    # ---------- Helpers ----------
+    def format_time(self, sec):
+        s = int(sec)
+        return f"{s//60:02d}:{s % 60:02d}"
 
-        main_layout.addLayout(controls_layout)
-
-        # Volume control
-        volume_layout = QHBoxLayout()
-        volume_label = QLabel("Volume:")
-        self.volume_slider = QSlider(Qt.Horizontal)
-        self.volume_slider.setRange(0, 100)
-        self.volume_slider.setValue(self.player.volume)
-        self.volume_slider.valueChanged.connect(self.set_volume)
-
-        volume_layout.addWidget(volume_label)
-        volume_layout.addWidget(self.volume_slider)
-        main_layout.addLayout(volume_layout)
-
-        # Playlist
-        playlist_label = QLabel("Playlist")
-        playlist_label.setFont(QFont("Arial", 10, QFont.Bold))
-        main_layout.addWidget(playlist_label)
-
-        self.playlist_widget = QListWidget()
-        self.playlist_widget.itemDoubleClicked.connect(
-            self.playlist_item_clicked
-        )
-        main_layout.addWidget(self.playlist_widget)
-
-    def format_time(self, milliseconds: int) -> str:
-        """Format milliseconds as MM:SS."""
-        seconds = int(milliseconds / 1000)
-        minutes, seconds = divmod(seconds, 60)
-        return f"{minutes:02d}:{seconds:02d}"
+    def _load_cover(self, path):
+        for name in ("cover.jpg", "folder.jpg", "front.jpg"):
+            p = Path(path).with_name(name)
+            if p.exists():
+                return QPixmap(str(p))
+        return self.unknown_cover
 
     @pyqtSlot()
-    def update_position(self):
-        """Update the current playback position."""
-        if self.player.current_media and self.player.is_playing:
-            # Update progress slider
-            position_percent = self.player.position_percent
-            self.progress_slider.setValue(int(position_percent))
+    def update_ui(self):
+        if self.player.current_index < 0:
+            return
+        pos = self.player.position
+        dur = self.player.duration
+        self.cur_lbl.setText(self.format_time(pos))
+        self.tot_lbl.setText(self.format_time(dur))
+        if dur:
+            self.progress.setValue(int(1000 * pos / dur))
 
-            # Update time labels
-            self.current_time_label.setText(
-                self.format_time(self.player.position)
-            )
-            self.total_time_label.setText(
-                self.format_time(self.player.duration)
-            )
+        track = self.player.playlist[self.player.current_index]
+        self.track_lbl.setText(track.get("title", "Unknown"))
+        cover = self._load_cover(track["path"])
+        self.cover_lbl.setPixmap(cover.scaled(200, 200, Qt.KeepAspectRatio))
 
-            # Update track info
-            if self.player.playlist and self.player.current_index >= 0:
-                track_title = self.player.playlist[self.player.current_index][
-                    "title"
-                ]
-                self.now_playing_label.setText(f"Now Playing: {track_title}")
+        self._sync_play_icon()
+
+    @pyqtSlot()
+    def _sync_play_icon(self):
+        icon = (
+            QStyle.SP_MediaPause
+            if self.player.is_playing
+            else QStyle.SP_MediaPlay
+        )
+        self.play_btn.setIcon(self.style().standardIcon(icon))
 
     @pyqtSlot(int)
-    def set_position(self, position: int):
-        """Set the playback position from slider value."""
-        self.player.position_percent = position
+    def _seek(self, val):
+        # pygame не поддерживает точный seek — оставим заглушку
+        pass
 
     @pyqtSlot()
-    def toggle_playback(self):
-        """Toggle play/pause."""
-        if not self.player.current_media:
+    def toggle_play(self):
+        if not self.player.playlist:
             return
-
         if self.player.is_playing:
             self.player.pause()
-            self.play_button.setIcon(
-                self.style().standardIcon(QStyle.SP_MediaPlay)
-            )
         else:
             self.player.play()
-            self.play_button.setIcon(
-                self.style().standardIcon(QStyle.SP_MediaPause)
-            )
+        self._sync_play_icon()
 
     @pyqtSlot()
     def stop(self):
-        """Stop playback."""
         self.player.stop()
-        self.play_button.setIcon(
-            self.style().standardIcon(QStyle.SP_MediaPlay)
-        )
-        self.progress_slider.setValue(0)
-        self.current_time_label.setText("00:00")
-
-    @pyqtSlot(int)
-    def set_volume(self, volume: int):
-        """Set the volume level."""
-        self.player.volume = volume
+        self.progress.setValue(0)
+        self._sync_play_icon()
 
     @pyqtSlot()
     def previous_track(self):
-        """Play the previous track in the playlist."""
-        if self.player.previous_track():
-            self.play_button.setIcon(
-                self.style().standardIcon(QStyle.SP_MediaPause)
-            )
-            self.update_playlist_selection()
+        self.player.previous_track()
 
     @pyqtSlot()
     def next_track(self):
-        """Play the next track in the playlist."""
-        if self.player.next_track():
-            self.play_button.setIcon(
-                self.style().standardIcon(QStyle.SP_MediaPause)
-            )
-            self.update_playlist_selection()
+        self.player.next_track()
 
+    @pyqtSlot(int)
+    def set_volume(self, v):
+        self.player.set_volume(v)
+        self.vol_lbl.setText(str(v))
+
+    # ---------- File operations ----------
     @pyqtSlot()
     def open_file(self):
-        """Open a file dialog to select an audio file."""
-        file_path, _ = QFileDialog.getOpenFileName(
+        files, _ = QFileDialog.getOpenFileNames(
             self,
-            "Open Audio File",
+            "Open audio",
             str(Path.home()),
-            "Audio Files (*.mp3 *.wav *.ogg *.flac *.aac *.wma "
-            "*.m4a *.aiff *.alac)",
+            "Audio (*.mp3 *.wav *.ogg *.flac *.m4a *.aac *.opus)",
         )
+        if not files:
+            return
+        self.player.clear_playlist()
+        for f in files:
+            self.player.add_to_playlist(f)
+        self._fill_playlist()
+        if self.player.playlist:
+            self.player.play_index(0)
 
-        if file_path:
-            try:
-                self.player.clear_playlist()
-                self.playlist_widget.clear()
-                self.player.add_to_playlist(file_path)
-                self.update_playlist()
-                self.player.play(file_path)
-                self.play_button.setIcon(
-                    self.style().standardIcon(QStyle.SP_MediaPause)
-                )
-            except (FileNotFoundError, AudioFormatNotSupportedError) as e:
-                self.now_playing_label.setText(f"Error: {str(e)}")
+    def _fill_playlist(self):
+        self.playlist.clear()
+        for t in self.player.playlist:
+            QListWidgetItem(t["title"], self.playlist)
+        self.playlist.setCurrentRow(self.player.current_index)
 
     @pyqtSlot()
-    def open_folder(self):
-        """Open a folder dialog to select a directory with audio files."""
-        directory = QFileDialog.getExistingDirectory(
-            self,
-            "Open Directory",
-            str(Path.home()),
-            QFileDialog.ShowDirsOnly,
-        )
-
-        if directory:
-            self.player.clear_playlist()
-            self.playlist_widget.clear()
-            count = self.player.load_playlist(directory)
-
-            if count > 0:
-                self.update_playlist()
-                self.player.play(self.player.playlist[0]["path"])
-                self.play_button.setIcon(
-                    self.style().standardIcon(QStyle.SP_MediaPause)
-                )
-            else:
-                self.now_playing_label.setText(
-                    "No supported audio files found in directory"
-                )
-
-    def update_playlist(self):
-        """Update the playlist widget with tracks from player's playlist."""
-        self.playlist_widget.clear()
-
-        for track in self.player.playlist:
-            item = QListWidgetItem(track["title"])
-            self.playlist_widget.addItem(item)
-
-        self.update_playlist_selection()
-
-    def update_playlist_selection(self):
-        """Highlight the current track in the playlist."""
-        if self.player.current_index >= 0:
-            self.playlist_widget.setCurrentRow(self.player.current_index)
-
-    @pyqtSlot(QListWidgetItem)
-    def playlist_item_clicked(self, item):
-        """Play the clicked playlist item."""
-        index = self.playlist_widget.row(item)
-        if 0 <= index < len(self.player.playlist):
-            self.player.current_index = index
-            self.player.play(self.player.playlist[index]["path"])
-            self.play_button.setIcon(
-                self.style().standardIcon(QStyle.SP_MediaPause)
-            )
+    def _play_item(self, item):
+        row = self.playlist.row(item)
+        if 0 <= row < len(self.player.playlist):
+            self.player.play_index(row)
 
 
 class GUIApp:
-    """GUI application wrapper for Dolboebify."""
-
     def __init__(self):
-        """Initialize the GUI application."""
         self.app = QApplication(sys.argv)
+        self.app.setStyle("Fusion")
         self.window = PlayerWindow()
 
     def run(self):
-        """Run the application."""
         return self.app.exec_()
+
+
+if __name__ == "__main__":
+    sys.exit(GUIApp().run())
