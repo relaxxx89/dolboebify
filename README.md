@@ -2,43 +2,78 @@
 
 A modern GUI audio player written in Python that supports various audio formats.
 
-## Screenshots
+## Screenshots (0.0.1-del-cli)
+
 <img width="945" height="1022" alt="image" src="https://github.com/user-attachments/assets/1af07966-45f2-40d5-93c2-b7cbdf01f323" />
 
 # (WHAT A HEEEEEEEEEEL GOOFY AHH PLAYER LOL)
 
 ## Features
 
-- Supports multiple audio formats (MP3, WAV, FLAC, OGG, etc.)
-- Simple and intuitive graphical interface
-- Playlist management
-- Volume control and audio visualization
-- Automatic track image retrieval from online sources
-- Custom track image API
+* Supports multiple audio formats (MP3, WAV, FLAC, OGG, etc.)
+* Simple and intuitive graphical interface
+* Playlist management
+* Volume control and audio visualization
+* Automatic track image retrieval from online sources
+* Custom track image API
 
 ## Installation
 
+### From source (all platforms)
+
 ```bash
-# Install from source
+# Clone the repo and install in editable mode
 git clone https://github.com/relaxxx89/dolboebify.git
 cd dolboebify
+python -m venv venv  # optional but recommended
+source venv/bin/activate  # on Windows: venv\Scripts\activate
 pip install -e .
-
-# Or install from PyPI (when published)
-pip install dolboebify
 ```
 
-## Usage
+> **Note:** Direct `pip install dolboebify` is not published yet.
+
+### On Arch Linux
+
+Install isolated with `pipx`:
+
+```bash
+sudo pacman -S python-pipx        # if you don't have pipx
+pipx install dolboebify
+```
+
+### On other Linux distributions
+
+Use a virtual environment and `pip`:
+
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install dolboebify       # once available on PyPI
+```
+
+### On Windows
+
+Install directly via `pip` (recommended in a virtual environment):
+
+````powershell
+# Optional: create and activate a venv
+python -m venv venv
+venv\Scripts\activate
+
+# Install Dolboebify
+pip install dolboebify
+```## Usage
+
 
 ```bash
 # Start the player
 dolboebify
 
-# You can also use Python directly
+# Or with Python module
 python -m dolboebify
-```
+````
 
-### Track Image API
+## Track Image API
 
 The player supports associating custom images with tracks and automatically fetching album art from online sources:
 
@@ -61,19 +96,39 @@ cover_path = player.get_track_image("path/to/track.mp3")
 player.remove_track_image("path/to/track.mp3")
 ```
 
+## Uninstallation
+
+### On Arch Linux
+
+If installed from the official repos or AUR:
+
+```bash
+sudo pacman -R dolboebify
+# or if using an AUR helper, e.g.
+yay -R dolboebify
+```
+
+### On Windows
+
+Open PowerShell or CMD:
+
+```powershell
+pip uninstall dolboebify
+```
+
 ## Dependencies
 
-- python-vlc - Core audio playback
-- pygame - Audio processing
-- pydub - Audio file handling
-- PyQt5 - Graphical user interface
-- requests - For online album art retrieval
+* python-vlc - Core audio playback
+* pygame - Audio processing
+* pydub - Audio file handling
+* PyQt5 - Graphical user interface
+* requests - For online album art retrieval
 
 ## Development
 
 ```bash
 # Install development dependencies
-pip install -e ".[dev]"
+pip install -e "[dev]"
 
 # Run tests
 pytest
