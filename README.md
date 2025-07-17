@@ -13,6 +13,8 @@ A modern GUI audio player written in Python that supports various audio formats.
 - Simple and intuitive graphical interface
 - Playlist management
 - Volume control and audio visualization
+- Automatic track image retrieval from online sources
+- Custom track image API
 
 ## Installation
 
@@ -36,12 +38,36 @@ dolboebify
 python -m dolboebify
 ```
 
+### Track Image API
+
+The player supports associating custom images with tracks and automatically fetching album art from online sources:
+
+```python
+from dolboebify.core import Player
+
+# Create a player instance
+player = Player()
+
+# Add a track to the playlist
+player.add_to_playlist("path/to/track.mp3")
+
+# Manually set a custom image for a track
+player.set_track_image("path/to/track.mp3", "path/to/cover.jpg")
+
+# Get the image associated with a track (includes online fetching)
+cover_path = player.get_track_image("path/to/track.mp3")
+
+# Remove an image association
+player.remove_track_image("path/to/track.mp3")
+```
+
 ## Dependencies
 
 - python-vlc - Core audio playback
 - pygame - Audio processing
 - pydub - Audio file handling
 - PyQt5 - Graphical user interface
+- requests - For online album art retrieval
 
 ## Development
 

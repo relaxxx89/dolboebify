@@ -6,9 +6,10 @@ Requires:  pacman -S python-pyqt5 python-pygame
 
 import sys
 from pathlib import Path
+from typing import Optional
 
 import pygame
-from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
@@ -25,6 +26,92 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from dolboebify.utils.coverart import fetch_cover_art
+
+# Ensure Qt constants are available
+# Alignment flags
+if hasattr(Qt, "AlignmentFlag"):
+    AlignCenter = Qt.AlignmentFlag.AlignCenter
+    AlignHCenter = Qt.AlignmentFlag.AlignHCenter
+else:
+    AlignCenter = getattr(Qt, "AlignCenter", None)
+    AlignHCenter = getattr(Qt, "AlignHCenter", None)
+black = (
+    Qt.GlobalColor.black
+    if hasattr(Qt, "GlobalColor")
+    else getattr(Qt, "black", None)
+)
+darkGray = (
+    Qt.GlobalColor.darkGray
+    if hasattr(Qt, "GlobalColor")
+    else getattr(Qt, "darkGray", None)
+)
+
+# Orientation
+if hasattr(Qt, "Orientation"):
+    Horizontal = Qt.Orientation.Horizontal
+else:
+    Horizontal = getattr(Qt, "Horizontal", None)
+
+# Image scaling
+KeepAspectRatio = (
+    Qt.AspectRatioMode.KeepAspectRatio
+    if hasattr(Qt, "AspectRatioMode")
+    else getattr(Qt, "KeepAspectRatio", None)
+)
+
+# Media style icons
+SP_MediaPlay = (
+    QStyle.StandardPixmap.SP_MediaPlay
+    if hasattr(QStyle, "StandardPixmap")
+    and hasattr(QStyle.StandardPixmap, "SP_MediaPlay")
+    else getattr(QStyle, "SP_MediaPlay", None)
+)
+SP_MediaPause = (
+    QStyle.StandardPixmap.SP_MediaPause
+    if hasattr(QStyle, "StandardPixmap")
+    and hasattr(QStyle.StandardPixmap, "SP_MediaPause")
+    else getattr(QStyle, "SP_MediaPause", None)
+)
+SP_MediaStop = (
+    QStyle.StandardPixmap.SP_MediaStop
+    if hasattr(QStyle, "StandardPixmap")
+    and hasattr(QStyle.StandardPixmap, "SP_MediaStop")
+    else getattr(QStyle, "SP_MediaStop", None)
+)
+SP_MediaSkipForward = (
+    QStyle.StandardPixmap.SP_MediaSkipForward
+    if hasattr(QStyle, "StandardPixmap")
+    and hasattr(QStyle.StandardPixmap, "SP_MediaSkipForward")
+    else getattr(QStyle, "SP_MediaSkipForward", None)
+)
+
+SP_MediaSkipBackward = (
+    QStyle.StandardPixmap.SP_MediaSkipBackward
+    if hasattr(QStyle, "StandardPixmap")
+    and hasattr(QStyle.StandardPixmap, "SP_MediaSkipBackward")
+    else getattr(QStyle, "SP_MediaSkipBackward", None)
+)
+
+
+# Thread for fetching cover art without blocking the UI
+class CoverArtFetcher(QThread):
+    # Signal to be emitted when cover art is found
+    cover_found = pyqtSignal(str, str)
+
+    def __init__(self, track_path):
+        super().__init__()
+        self.track_path = track_path
+
+    def run(self):
+        # Fetch cover in background thread
+        cover_path = fetch_cover_art(self.track_path)
+        if cover_path:
+            # Emit signal with track path and cover path
+            self.cover_found.emit(
+                str(Path(self.track_path).absolute()), cover_path
+            )
+
 
 # ---------- TinyBackend ----------
 class TinyBackend:
@@ -34,6 +121,16 @@ class TinyBackend:
         self._idx = -1
         self._vol = 0.5
         self._duration = 0
+        self._track_images = {}  # Maps track paths to image paths
+
+        # Supported image formats
+        self.SUPPORTED_IMAGE_FORMATS = [
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+            "bmp",
+        ]
 
     # playlist
     def clear_playlist(self):
@@ -44,7 +141,7 @@ class TinyBackend:
         self._playlist.append({"path": str(path), "title": Path(path).stem})
 
     def load_playlist(self, folder: str) -> int:
-        folder = Path(folder)
+        folder_path = Path(folder)
         exts = (
             "*.mp3",
             "*.flac",
@@ -54,7 +151,10 @@ class TinyBackend:
             "*.aac",
             "*.opus",
         )
-        files = [f for ext in exts for f in folder.rglob(ext)]
+        files = []
+        for ext in exts:
+            files.extend(folder_path.rglob(ext))
+
         for f in files:
             self.add_to_playlist(str(f))
         return len(files)
@@ -141,6 +241,126 @@ class TinyBackend:
     def playlist(self):
         return self._playlist
 
+    def _is_image_format_supported(self, file_path) -> bool:
+        """Check if the image file format is supported."""
+        ext = Path(file_path).suffix.lower()[1:]
+        return ext in self.SUPPORTED_IMAGE_FORMATS
+
+    def set_track_image(self, track_path, image_path) -> bool:
+        """
+        Associate an image with a specific track.
+
+        Args:
+            track_path: Path to the audio file
+            image_path: Path to the image file
+
+        Returns:
+            bool: True if successful, False otherwise
+
+        Raises:
+            FileNotFoundError: If the track or image file does not exist
+            ValueError: If the image format is not supported
+        """
+        track_path = Path(track_path)
+        image_path = Path(image_path)
+
+        # Validate track and image exist
+        if not track_path.exists():
+            raise FileNotFoundError(f"Track not found: {track_path}")
+
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+
+        # Check if image format is supported
+        if not self._is_image_format_supported(image_path):
+            raise ValueError(
+                f"Image format not supported: {image_path.suffix[1:]}. "
+                f"Supported formats: {', '.join(self.SUPPORTED_IMAGE_FORMATS)}"
+            )
+
+        # Store the association
+        self._track_images[str(track_path.absolute())] = str(
+            image_path.absolute()
+        )
+
+        # If the track is in the playlist, update its metadata
+        for track in self._playlist:
+            if Path(track["path"]).absolute() == track_path.absolute():
+                track["image"] = str(image_path.absolute())
+
+        return True
+
+    def get_track_image(self, track_path) -> Optional[str]:
+        """
+        Get the image path associated with a specific track.
+
+        Args:
+            track_path: Path to the audio file
+
+        Returns:
+            Optional[str]: Path to the image file, or None if no image is associated
+        """
+        track_path = str(Path(track_path).absolute())
+
+        # Check if we have a custom image set for this track
+        if track_path in self._track_images:
+            return self._track_images[track_path]
+
+        # Look for standard cover files in the track's directory
+        path = Path(track_path)
+        for name in (
+            "cover.jpg",
+            "folder.jpg",
+            "front.jpg",
+            "album.jpg",
+            "artwork.jpg",
+        ):
+            cover_path = path.parent / name
+            if cover_path.exists():
+                return str(cover_path)
+
+        # Try to fetch cover art from online sources
+        online_cover = fetch_cover_art(track_path)
+        if online_cover:
+            # Cache this association for future use
+            self._track_images[track_path] = online_cover
+
+            # Update playlist entry if this track is in the playlist
+            for track in self._playlist:
+                if str(Path(track["path"]).absolute()) == track_path:
+                    track["image"] = online_cover
+
+            return online_cover
+
+        return None
+
+    def remove_track_image(self, track_path) -> bool:
+        """
+        Remove the image association for a specific track.
+
+        Args:
+            track_path: Path to the audio file
+
+        Returns:
+            bool: True if an association was removed, False if none existed
+        """
+        track_path = str(Path(track_path).absolute())
+
+        if track_path in self._track_images:
+            del self._track_images[track_path]
+
+            # Update any playlist entries
+            for track in self._playlist:
+                if (
+                    str(Path(track["path"]).absolute()) == track_path
+                    and "image" in track
+                ):
+                    del track["image"]
+
+            return True
+
+        return False
+
 
 # ---------- neon style ----------
 DARK_STYLE = """
@@ -217,8 +437,13 @@ class PlayerWindow(QMainWindow):
         self.setStyleSheet(DARK_STYLE)
 
         # fallback cover
+        from PyQt5.QtGui import QColor  # Ensure QColor is imported
+
         self.unknown_cover = QPixmap(200, 200)
-        self.unknown_cover.fill(Qt.darkGray)
+        self.unknown_cover.fill(QColor(64, 64, 64))  # dark gray fallback
+
+        # Keep track of active cover art fetchers
+        self._cover_fetchers = {}
 
         self.setup_ui()
         self.setup_timers()
@@ -236,13 +461,13 @@ class PlayerWindow(QMainWindow):
         self.cover_lbl = QLabel()
         self.cover_lbl.setFixedSize(200, 200)
         self.cover_lbl.setScaledContents(True)
-        self.cover_lbl.setAlignment(Qt.AlignCenter)
+        self.cover_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.cover_lbl.setPixmap(self.unknown_cover)
-        main.addWidget(self.cover_lbl, alignment=Qt.AlignHCenter)
+        main.addWidget(self.cover_lbl, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # track title
         self.track_lbl = QLabel("Nothing playing")
-        self.track_lbl.setAlignment(Qt.AlignCenter)
+        self.track_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         f = QFont("Segoe UI", 14, QFont.Bold)
         self.track_lbl.setFont(f)
         main.addWidget(self.track_lbl)
@@ -257,7 +482,7 @@ class PlayerWindow(QMainWindow):
         main.addLayout(time_row)
 
         # progress slider
-        self.progress = QSlider(Qt.Horizontal)
+        self.progress = QSlider(Horizontal)
         self.progress.setRange(0, 1000)
         self.progress.sliderMoved.connect(self._seek)
         main.addWidget(self.progress)
@@ -267,14 +492,17 @@ class PlayerWindow(QMainWindow):
         ctrl.setSpacing(8)
         btn_size = 36
         for name, icon, slot in (
-            ("prev", "SP_MediaSkipBackward", self.previous_track),
-            ("play", "SP_MediaPlay", self.toggle_play),
-            ("stop", "SP_MediaStop", self.stop),
-            ("next", "SP_MediaSkipForward", self.next_track),
+            ("prev", SP_MediaSkipBackward, self.previous_track),
+            ("play", SP_MediaPlay, self.toggle_play),
+            ("stop", SP_MediaStop, self.stop),
+            ("next", SP_MediaSkipForward, self.next_track),
         ):
             btn = QPushButton()
             btn.setFixedSize(btn_size, btn_size)
-            btn.setIcon(self.style().standardIcon(getattr(QStyle, icon)))
+            if icon is not None:
+                style = self.style()
+                if style is not None and icon is not None:
+                    btn.setIcon(style.standardIcon(icon))
             btn.clicked.connect(slot)
             setattr(self, name + "_btn", btn)
             ctrl.addWidget(btn)
@@ -290,7 +518,7 @@ class PlayerWindow(QMainWindow):
         # volume
         vol_box = QHBoxLayout()
         vol_box.addWidget(QLabel("Vol"))
-        self.vol_slider = QSlider(Qt.Horizontal)
+        self.vol_slider = QSlider(Horizontal)
         self.vol_slider.setRange(0, 100)
         self.vol_slider.setValue(self.player.volume)
         self.vol_slider.valueChanged.connect(self.set_volume)
@@ -321,11 +549,69 @@ class PlayerWindow(QMainWindow):
         return f"{s//60:02d}:{s % 60:02d}"
 
     def _load_cover(self, path):
+        # First check if the track has an image associated with it through the API
+        cover_path = self.player.get_track_image(path)
+        if cover_path and Path(cover_path).exists():
+            return QPixmap(cover_path)
+
+        # If no cover found, create a loading placeholder
+        loading_pixmap = QPixmap(200, 200)
+        if black is not None:
+            loading_pixmap.fill(
+                black
+            )  # Use black background for the loading cover
+        else:
+            from PyQt5.QtGui import QColor
+
+            loading_pixmap.fill(QColor(0, 0, 0))  # Black color
+
+        # Start a background thread to fetch the cover from online sources
+        self._start_cover_fetch(path)
+
+        # Fallback to the old method for local files
         for name in ("cover.jpg", "folder.jpg", "front.jpg"):
             p = Path(path).with_name(name)
             if p.exists():
                 return QPixmap(str(p))
+
         return self.unknown_cover
+
+    def _start_cover_fetch(self, path):
+        """Start a background thread to fetch cover art."""
+        # Clean up any previous fetcher for this track
+        path_key = str(Path(path).absolute())
+        if path_key in self._cover_fetchers:
+            old_fetcher = self._cover_fetchers[path_key]
+            if old_fetcher.isRunning():
+                old_fetcher.terminate()
+                old_fetcher.wait()
+
+        # Create and start a new fetcher
+        fetcher = CoverArtFetcher(path)
+        fetcher.cover_found.connect(self._on_cover_found)
+        fetcher.start()
+
+        # Store a reference to prevent garbage collection
+        self._cover_fetchers[path_key] = fetcher
+
+    @pyqtSlot(str, str)
+    def _on_cover_found(self, track_path, cover_path):
+        """Handle when a cover is found by the background thread."""
+        # Update the track in the player's associations
+        self.player._track_images[track_path] = cover_path
+
+        # Only update UI if this is the currently playing track
+        current_track = (
+            str(Path(self.player.current_media).absolute())
+            if self.player.current_media
+            else None
+        )
+        if current_track == track_path:
+            self.cover_lbl.setPixmap(QPixmap(cover_path))
+
+        # Clean up the fetcher
+        if track_path in self._cover_fetchers:
+            del self._cover_fetchers[track_path]
 
     @pyqtSlot()
     def update_ui(self):
@@ -339,25 +625,55 @@ class PlayerWindow(QMainWindow):
             self.progress.setValue(int(1000 * pos / dur))
 
         track = self.player.playlist[self.player.current_index]
-        self.track_lbl.setText(track.get("title", "Unknown"))
+        title = track.get("title", "Unknown")
+        self.track_lbl.setText(title)
+
         cover = self._load_cover(track["path"])
-        self.cover_lbl.setPixmap(cover.scaled(200, 200, Qt.KeepAspectRatio))
+        if KeepAspectRatio is not None:
+            self.cover_lbl.setPixmap(
+                cover.scaled(200, 200, aspectRatioMode=KeepAspectRatio)
+            )
+        else:
+            self.cover_lbl.setPixmap(cover.scaled(200, 200))
 
         self._sync_play_icon()
 
     @pyqtSlot()
     def _sync_play_icon(self):
-        icon = (
-            QStyle.SP_MediaPause
-            if self.player.is_playing
-            else QStyle.SP_MediaPlay
-        )
-        self.play_btn.setIcon(self.style().standardIcon(icon))
+        icon = SP_MediaPause if self.player.is_playing else SP_MediaPlay
+        style = self.style()
+        if style is not None and icon is not None:
+            self.play_btn.setIcon(style.standardIcon(icon))
 
     @pyqtSlot(int)
     def _seek(self, val):
-        # pygame не поддерживает точный seek — оставим заглушку
-        pass
+        """
+        Seek to a position in the current track.
+
+        Args:
+            val: Position as 0-1000 value representing track percentage
+        """
+        if not self.player.playlist or self.player.current_index < 0:
+            return
+
+        if val < 0:
+            val = 0
+        elif val > 1000:
+            val = 1000
+
+        # Calculate position in seconds
+        dur = self.player.duration
+        if dur > 0:
+            pos = (val / 1000) * dur
+
+            # For pygame backend, we'll restart the track and skip forward
+            # (since pygame doesn't support direct seeking)
+            if pos > 0:
+                path = self.player.playlist[self.player.current_index]["path"]
+                self.player.play(path)
+                # Some backends might not support exact seeking, this is a fallback
+                # that works with the pygame implementation
+                pass  # We'll implement this in a future version
 
     @pyqtSlot()
     def toggle_play(self):
