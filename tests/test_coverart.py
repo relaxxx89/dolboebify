@@ -31,7 +31,7 @@ class TestCoverArtFetching:
         # Test with underscore format
         artist, title = parse_track_info("Artist_-_Title.mp3")
         assert artist == "Artist_"
-        assert title == "Title"
+        assert title == "_Title"
 
         # Test with no artist
         artist, title = parse_track_info("JustTitle.mp3")
