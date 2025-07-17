@@ -30,60 +30,67 @@ from dolboebify.utils.coverart import fetch_cover_art
 
 # Ensure Qt constants are available
 # Alignment flags
-AlignCenter = (
-    Qt.AlignmentFlag.AlignCenter
-    if hasattr(Qt, "AlignmentFlag")
-    else Qt.AlignCenter
+if hasattr(Qt, "AlignmentFlag"):
+    AlignCenter = Qt.AlignmentFlag.AlignCenter
+    AlignHCenter = Qt.AlignmentFlag.AlignHCenter
+else:
+    AlignCenter = getattr(Qt, "AlignCenter", None)
+    AlignHCenter = getattr(Qt, "AlignHCenter", None)
+black = (
+    Qt.GlobalColor.black
+    if hasattr(Qt, "GlobalColor")
+    else getattr(Qt, "black", None)
 )
-AlignHCenter = (
-    Qt.AlignmentFlag.AlignHCenter
-    if hasattr(Qt, "AlignmentFlag")
-    else Qt.AlignHCenter
-)
-
-# Colors
-black = Qt.GlobalColor.black if hasattr(Qt, "GlobalColor") else Qt.black
 darkGray = (
-    Qt.GlobalColor.darkGray if hasattr(Qt, "GlobalColor") else Qt.darkGray
+    Qt.GlobalColor.darkGray
+    if hasattr(Qt, "GlobalColor")
+    else getattr(Qt, "darkGray", None)
 )
 
 # Orientation
-Horizontal = (
-    Qt.Orientation.Horizontal if hasattr(Qt, "Orientation") else Qt.Horizontal
-)
+if hasattr(Qt, "Orientation"):
+    Horizontal = Qt.Orientation.Horizontal
+else:
+    Horizontal = getattr(Qt, "Horizontal", None)
 
 # Image scaling
 KeepAspectRatio = (
     Qt.AspectRatioMode.KeepAspectRatio
     if hasattr(Qt, "AspectRatioMode")
-    else Qt.KeepAspectRatio
+    else getattr(Qt, "KeepAspectRatio", None)
 )
 
 # Media style icons
 SP_MediaPlay = (
     QStyle.StandardPixmap.SP_MediaPlay
     if hasattr(QStyle, "StandardPixmap")
-    else QStyle.SP_MediaPlay
+    and hasattr(QStyle.StandardPixmap, "SP_MediaPlay")
+    else getattr(QStyle, "SP_MediaPlay", None)
 )
 SP_MediaPause = (
     QStyle.StandardPixmap.SP_MediaPause
     if hasattr(QStyle, "StandardPixmap")
-    else QStyle.SP_MediaPause
+    and hasattr(QStyle.StandardPixmap, "SP_MediaPause")
+    else getattr(QStyle, "SP_MediaPause", None)
 )
 SP_MediaStop = (
     QStyle.StandardPixmap.SP_MediaStop
     if hasattr(QStyle, "StandardPixmap")
-    else QStyle.SP_MediaStop
+    and hasattr(QStyle.StandardPixmap, "SP_MediaStop")
+    else getattr(QStyle, "SP_MediaStop", None)
 )
 SP_MediaSkipForward = (
     QStyle.StandardPixmap.SP_MediaSkipForward
     if hasattr(QStyle, "StandardPixmap")
-    else QStyle.SP_MediaSkipForward
+    and hasattr(QStyle.StandardPixmap, "SP_MediaSkipForward")
+    else getattr(QStyle, "SP_MediaSkipForward", None)
 )
+
 SP_MediaSkipBackward = (
     QStyle.StandardPixmap.SP_MediaSkipBackward
     if hasattr(QStyle, "StandardPixmap")
-    else QStyle.SP_MediaSkipBackward
+    and hasattr(QStyle.StandardPixmap, "SP_MediaSkipBackward")
+    else getattr(QStyle, "SP_MediaSkipBackward", None)
 )
 
 
@@ -430,8 +437,10 @@ class PlayerWindow(QMainWindow):
         self.setStyleSheet(DARK_STYLE)
 
         # fallback cover
+        from PyQt5.QtGui import QColor  # Ensure QColor is imported
+
         self.unknown_cover = QPixmap(200, 200)
-        self.unknown_cover.fill(darkGray)
+        self.unknown_cover.fill(QColor(64, 64, 64))  # dark gray fallback
 
         # Keep track of active cover art fetchers
         self._cover_fetchers = {}
@@ -452,13 +461,13 @@ class PlayerWindow(QMainWindow):
         self.cover_lbl = QLabel()
         self.cover_lbl.setFixedSize(200, 200)
         self.cover_lbl.setScaledContents(True)
-        self.cover_lbl.setAlignment(AlignCenter)
+        self.cover_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.cover_lbl.setPixmap(self.unknown_cover)
-        main.addWidget(self.cover_lbl, alignment=AlignHCenter)
+        main.addWidget(self.cover_lbl, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         # track title
         self.track_lbl = QLabel("Nothing playing")
-        self.track_lbl.setAlignment(AlignCenter)
+        self.track_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         f = QFont("Segoe UI", 14, QFont.Bold)
         self.track_lbl.setFont(f)
         main.addWidget(self.track_lbl)
@@ -490,7 +499,10 @@ class PlayerWindow(QMainWindow):
         ):
             btn = QPushButton()
             btn.setFixedSize(btn_size, btn_size)
-            btn.setIcon(self.style().standardIcon(icon))
+            if icon is not None:
+                style = self.style()
+                if style is not None and icon is not None:
+                    btn.setIcon(style.standardIcon(icon))
             btn.clicked.connect(slot)
             setattr(self, name + "_btn", btn)
             ctrl.addWidget(btn)
@@ -544,9 +556,14 @@ class PlayerWindow(QMainWindow):
 
         # If no cover found, create a loading placeholder
         loading_pixmap = QPixmap(200, 200)
-        loading_pixmap.fill(
-            black
-        )  # Use black background for the loading cover
+        if black is not None:
+            loading_pixmap.fill(
+                black
+            )  # Use black background for the loading cover
+        else:
+            from PyQt5.QtGui import QColor
+
+            loading_pixmap.fill(QColor(0, 0, 0))  # Black color
 
         # Start a background thread to fetch the cover from online sources
         self._start_cover_fetch(path)
@@ -612,14 +629,21 @@ class PlayerWindow(QMainWindow):
         self.track_lbl.setText(title)
 
         cover = self._load_cover(track["path"])
-        self.cover_lbl.setPixmap(cover.scaled(200, 200, KeepAspectRatio))
+        if KeepAspectRatio is not None:
+            self.cover_lbl.setPixmap(
+                cover.scaled(200, 200, aspectRatioMode=KeepAspectRatio)
+            )
+        else:
+            self.cover_lbl.setPixmap(cover.scaled(200, 200))
 
         self._sync_play_icon()
 
     @pyqtSlot()
     def _sync_play_icon(self):
         icon = SP_MediaPause if self.player.is_playing else SP_MediaPlay
-        self.play_btn.setIcon(self.style().standardIcon(icon))
+        style = self.style()
+        if style is not None and icon is not None:
+            self.play_btn.setIcon(style.standardIcon(icon))
 
     @pyqtSlot(int)
     def _seek(self, val):

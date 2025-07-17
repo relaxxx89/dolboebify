@@ -38,7 +38,11 @@ class Player:
     def __init__(self):
         """Initialize the player."""
         self.instance = vlc.Instance("--no-xlib")
-        self.media_player = self.instance.media_player_new() if self.instance is not None else None
+        self.media_player = (
+            self.instance.media_player_new()
+            if self.instance is not None
+            else None
+        )
         self.current_media = None
         self.playlist: List[Dict[str, str]] = []
         self.current_index = -1
@@ -86,6 +90,7 @@ class Player:
             self.media_player.set_time(value)
         if self._duration > 0:
             return (self.position / self._duration) * 100
+
         @property
         def position_percent(self) -> float:
             """Get the playback position as a percentage."""
@@ -138,7 +143,9 @@ class Player:
 
         # Create a VLC media object, handling NoneType errors
         if self.instance is None or self.media_player is None:
-            raise RuntimeError("VLC instance or media player is not initialized.")
+            raise RuntimeError(
+                "VLC instance or media player is not initialized."
+            )
 
         media = self.instance.media_new(str(path.absolute()))
         self.media_player.set_media(media)
