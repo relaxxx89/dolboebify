@@ -1,13 +1,11 @@
 """Tests for track image API functionality."""
 
-import os
 from pathlib import Path
 from unittest import mock
 
 import pytest
 
 from dolboebify.core import Player
-from dolboebify.utils.exceptions import AudioFormatNotSupportedError
 
 
 class TestTrackImageAPI:

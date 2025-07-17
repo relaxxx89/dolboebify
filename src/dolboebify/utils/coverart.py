@@ -5,7 +5,7 @@ import os
 import re
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 from urllib.parse import quote
 
 import requests
@@ -37,8 +37,10 @@ def parse_track_info(filename: str) -> Tuple[str, str]:
 
     # Common patterns: "Artist - Title" or "Artist_-_Title" or "01. Artist - Title"
     patterns = [
-        r"^(?:\d+\.\s*)?(.+?)\s*[-–—]\s*(.+)$",  # "Artist - Title" or "01. Artist - Title"
-        r"^(?:\d+\.\s*)?(.+?)_-_(.+)$",  # "Artist_-_Title" or "01. Artist_-_Title"
+        # "Artist - Title" or "01. Artist - Title"
+        r"^(?:\d+\.\s*)?(.+?)\s*[-–—]\s*(.+)$",
+        # "Artist_-_Title" or "01. Artist_-_Title"
+        r"^(?:\d+\.\s*)?(.+?)_-_(.+)$",
     ]
 
     for pattern in patterns:
@@ -233,7 +235,11 @@ def fetch_from_lastfm(artist: str, title: str) -> Optional[str]:
 
     try:
         # Try track.getInfo first
-        url = f"http://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key={api_key}&artist={quote(artist)}&track={quote(title)}&format=json"
+        url = (
+            f"http://ws.audioscrobbler.com/2.0/?"
+            f"method=track.getInfo&api_key={api_key}&"
+            f"artist={quote(artist)}&track={quote(title)}&format=json"
+        )
         response = requests.get(url, timeout=timeout)
 
         if response.status_code == 200:
@@ -257,7 +263,11 @@ def fetch_from_lastfm(artist: str, title: str) -> Optional[str]:
                                 pass
 
         # If track.getInfo didn't work, try artist.getInfo
-        url = f"http://ws.audioscrobbler.com/2.0/?method=artist.getInfo&api_key={api_key}&artist={quote(artist)}&format=json"
+        url = (
+            f"http://ws.audioscrobbler.com/2.0/?"
+            f"method=artist.getInfo&api_key={api_key}&"
+            f"artist={quote(artist)}&format=json"
+        )
         response = requests.get(url, timeout=timeout)
 
         if response.status_code == 200:

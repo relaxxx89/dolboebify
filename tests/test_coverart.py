@@ -1,10 +1,6 @@
 """Tests for the cover art fetching functionality."""
 
-import os
-from pathlib import Path
 from unittest import mock
-
-import pytest
 
 from dolboebify.utils.coverart import (
     fetch_cover_art,

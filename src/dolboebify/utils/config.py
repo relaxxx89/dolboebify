@@ -1,104 +1,101 @@
-"""Configuration settings for the Dolboebify player."""
+"""Configuration utilities for Dolboebify."""
 
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict
 
 # Default configuration
 DEFAULT_CONFIG = {
-    # Cover art settings
     "cover_art": {
         "enabled": True,
         "fetch_online": True,
-        "timeout": 2.0,  # Request timeout in seconds
-        "cache_ttl": 3600,  # Failed cache TTL in seconds (1 hour)
-        "cache_max_size": 1000,  # Maximum number of cached covers
-    }
+        "timeout": 2.0,
+        "cache_ttl": 3600,  # 1 hour
+    },
+    "player": {
+        "default_volume": 70,
+        "remember_last_position": True,
+    },
+    "ui": {
+        "theme": "dark",
+        "show_track_numbers": True,
+    },
 }
 
-# Configuration directory
+# Config file path
 CONFIG_DIR = Path.home() / ".config" / "dolboebify"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
-# Ensure the config directory exists
-os.makedirs(CONFIG_DIR, exist_ok=True)
 
-# The loaded configuration
-_config = None
+def load_config():
+    """Load configuration from file or create default if it doesn't exist."""
+    if not CONFIG_FILE.exists():
+        save_config(DEFAULT_CONFIG)
+        return DEFAULT_CONFIG.copy()
 
-
-def get_config() -> Dict[str, Any]:
-    """
-    Get the application configuration.
-
-    Returns:
-        Dict[str, Any]: Configuration dictionary
-    """
-    global _config
-
-    if _config is not None:
-        return _config
-
-    # Try to load config from file
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r") as f:
-                user_config = json.load(f)
-
-            # Merge with defaults to ensure all required keys are present
-            _config = DEFAULT_CONFIG.copy()
-            _update_dict_recursive(_config, user_config)
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"Error loading config: {e}")
-            _config = DEFAULT_CONFIG.copy()
-    else:
-        # Use defaults and save to file
-        _config = DEFAULT_CONFIG.copy()
-        save_config()
-
-    return _config
+    try:
+        with open(CONFIG_FILE, "r") as f:
+            config = json.load(f)
+            # Ensure all default values exist
+            for section, values in DEFAULT_CONFIG.items():
+                if section not in config:
+                    config[section] = values
+                else:
+                    for key, value in values.items():
+                        if key not in config[section]:
+                            config[section][key] = value
+        return config
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Error loading config: {e}")
+        return DEFAULT_CONFIG.copy()
 
 
-def save_config():
-    """Save the current configuration to disk."""
+def save_config(config):
+    """Save configuration to file."""
+    # Ensure config directory exists
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+
     try:
         with open(CONFIG_FILE, "w") as f:
-            json.dump(_config or DEFAULT_CONFIG, f, indent=2)
+            json.dump(config, f, indent=2)
+        return True
     except IOError as e:
         print(f"Error saving config: {e}")
+        return False
 
 
-def _update_dict_recursive(base_dict: Dict, update_dict: Dict):
+def get_setting(section, key, default=None):
     """
-    Update a nested dictionary recursively.
+    Get a setting from the configuration.
 
     Args:
-        base_dict: Dictionary to update
-        update_dict: Values to update with
-    """
-    for key, value in update_dict.items():
-        if (
-            key in base_dict
-            and isinstance(base_dict[key], dict)
-            and isinstance(value, dict)
-        ):
-            _update_dict_recursive(base_dict[key], value)
-        else:
-            base_dict[key] = value
-
-
-def get_setting(section: str, key: str, default=None) -> Any:
-    """
-    Get a specific setting from the configuration.
-
-    Args:
-        section: Configuration section
+        section: Section name
         key: Setting key
-        default: Default value if not found
+        default: Default value if the setting doesn't exist
 
     Returns:
-        Any: The setting value or default
+        The setting value or default if not found
     """
-    config = get_config()
+    config = load_config()
     return config.get(section, {}).get(key, default)
+
+
+def set_setting(section, key, value):
+    """
+    Set a setting in the configuration.
+
+    Args:
+        section: Section name
+        key: Setting key
+        value: Value to set
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    config = load_config()
+
+    if section not in config:
+        config[section] = {}
+
+    config[section][key] = value
+    return save_config(config)

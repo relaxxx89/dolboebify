@@ -4,7 +4,7 @@ from dolboebify.utils.cleanup import (
     clear_cover_cache,
     reset_failed_fetch_cache,
 )
-from dolboebify.utils.config import get_config, get_setting
+from dolboebify.utils.config import get_setting
 from dolboebify.utils.coverart import fetch_cover_art
 from dolboebify.utils.exceptions import (
     AudioFormatNotSupportedError,
@@ -29,7 +29,6 @@ __all__ = [
     "check_file_type",
     "get_file_info",
     "fetch_cover_art",
-    "get_config",
     "get_setting",
     "clear_cover_cache",
     "reset_failed_fetch_cache",

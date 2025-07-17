@@ -1,10 +1,10 @@
 """Utilities for cleaning up cache and temporary files."""
 
 import os
-import shutil
 from pathlib import Path
 
-from dolboebify.utils.coverart import COVER_CACHE_DIR
+# Cache directory for downloaded cover art
+COVER_CACHE_DIR = Path.home() / ".cache" / "dolboebify" / "covers"
 
 
 def clear_cover_cache() -> int:
