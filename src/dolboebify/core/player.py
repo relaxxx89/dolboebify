@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Union
 
 import vlc
 
+from dolboebify.utils.coverart import fetch_cover_art
 from dolboebify.utils.exceptions import AudioFormatNotSupportedError
 
 
@@ -25,6 +26,15 @@ class Player:
         "alac",
     ]
 
+    # Supported image formats for track covers
+    SUPPORTED_IMAGE_FORMATS = [
+        "jpg",
+        "jpeg",
+        "png",
+        "webp",
+        "bmp",
+    ]
+
     def __init__(self):
         """Initialize the player."""
         self.instance = vlc.Instance("--no-xlib")
@@ -36,6 +46,7 @@ class Player:
         self._paused = False
         self._duration = 0
         self.media_player.audio_set_volume(self._volume)
+        self._track_images = {}  # Maps track paths to image paths
 
     @property
     def volume(self) -> int:
@@ -95,6 +106,11 @@ class Player:
         """Check if the file format is supported."""
         ext = os.path.splitext(str(file_path))[1].lower()[1:]
         return ext in self.SUPPORTED_FORMATS
+
+    def _is_image_format_supported(self, file_path: Union[str, Path]) -> bool:
+        """Check if the image file format is supported."""
+        ext = os.path.splitext(str(file_path))[1].lower()[1:]
+        return ext in self.SUPPORTED_IMAGE_FORMATS
 
     def load(self, file_path: Union[str, Path]) -> bool:
         """
@@ -236,3 +252,107 @@ class Player:
                     count += 1
 
         return count
+
+    def set_track_image(self, track_path: Union[str, Path], image_path: Union[str, Path]) -> bool:
+        """
+        Associate an image with a specific track.
+        
+        Args:
+            track_path: Path to the audio file
+            image_path: Path to the image file
+            
+        Returns:
+            bool: True if successful, False otherwise
+            
+        Raises:
+            FileNotFoundError: If the track or image file does not exist
+            ValueError: If the image format is not supported
+        """
+        track_path = Path(track_path)
+        image_path = Path(image_path)
+        
+        # Validate track and image exist
+        if not track_path.exists():
+            raise FileNotFoundError(f"Track not found: {track_path}")
+            
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+            
+        # Check if image format is supported
+        if not self._is_image_format_supported(image_path):
+            raise ValueError(
+                f"Image format not supported: {image_path.suffix[1:]}. "
+                f"Supported formats: {', '.join(self.SUPPORTED_IMAGE_FORMATS)}"
+            )
+            
+        # Store the association
+        self._track_images[str(track_path.absolute())] = str(image_path.absolute())
+        
+        # If the track is in the playlist, update its metadata
+        for track in self.playlist:
+            if Path(track["path"]).absolute() == track_path.absolute():
+                track["image"] = str(image_path.absolute())
+                
+        return True
+        
+    def get_track_image(self, track_path: Union[str, Path]) -> Optional[str]:
+        """
+        Get the image path associated with a specific track.
+        
+        Args:
+            track_path: Path to the audio file
+            
+        Returns:
+            Optional[str]: Path to the image file, or None if no image is associated
+        """
+        track_path = str(Path(track_path).absolute())
+        
+        # Check if we have a custom image set for this track
+        if track_path in self._track_images:
+            return self._track_images[track_path]
+            
+        # Look for standard cover files in the track's directory
+        path = Path(track_path)
+        for name in ("cover.jpg", "folder.jpg", "front.jpg", "album.jpg", "artwork.jpg"):
+            cover_path = path.parent / name
+            if cover_path.exists():
+                return str(cover_path)
+        
+        # If no local cover found, try fetching from online sources
+        online_cover = fetch_cover_art(track_path)
+        if online_cover:
+            # Cache this association for future use
+            self._track_images[track_path] = online_cover
+            
+            # Update playlist entry if this track is in the playlist
+            for track in self.playlist:
+                if Path(track["path"]).absolute() == Path(track_path).absolute():
+                    track["image"] = online_cover
+                    
+            return online_cover
+                
+        return None
+        
+    def remove_track_image(self, track_path: Union[str, Path]) -> bool:
+        """
+        Remove the image association for a specific track.
+        
+        Args:
+            track_path: Path to the audio file
+            
+        Returns:
+            bool: True if an association was removed, False if none existed
+        """
+        track_path = str(Path(track_path).absolute())
+        
+        if track_path in self._track_images:
+            del self._track_images[track_path]
+            
+            # Update any playlist entries
+            for track in self.playlist:
+                if str(Path(track["path"]).absolute()) == track_path and "image" in track:
+                    del track["image"]
+                    
+            return True
+            
+        return False

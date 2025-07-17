@@ -5,10 +5,12 @@ Requires:  pacman -S python-pyqt5 python-pygame
 """
 
 import sys
+import threading
 from pathlib import Path
+from typing import Optional
 
 import pygame
-from PyQt5.QtCore import Qt, QTimer, pyqtSlot
+from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import (
     QApplication,
@@ -25,6 +27,25 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from dolboebify.utils.coverart import fetch_cover_art
+
+
+# Thread for fetching cover art without blocking the UI
+class CoverArtFetcher(QThread):
+    # Signal to be emitted when cover art is found
+    cover_found = pyqtSignal(str, str)
+    
+    def __init__(self, track_path):
+        super().__init__()
+        self.track_path = track_path
+        
+    def run(self):
+        # Fetch cover in background thread
+        cover_path = fetch_cover_art(self.track_path)
+        if cover_path:
+            # Emit signal with track path and cover path
+            self.cover_found.emit(str(Path(self.track_path).absolute()), cover_path)
+
 
 # ---------- TinyBackend ----------
 class TinyBackend:
@@ -34,6 +55,16 @@ class TinyBackend:
         self._idx = -1
         self._vol = 0.5
         self._duration = 0
+        self._track_images = {}  # Maps track paths to image paths
+        
+        # Supported image formats
+        self.SUPPORTED_IMAGE_FORMATS = [
+            "jpg",
+            "jpeg",
+            "png",
+            "webp",
+            "bmp",
+        ]
 
     # playlist
     def clear_playlist(self):
@@ -44,7 +75,7 @@ class TinyBackend:
         self._playlist.append({"path": str(path), "title": Path(path).stem})
 
     def load_playlist(self, folder: str) -> int:
-        folder = Path(folder)
+        folder_path = Path(folder)
         exts = (
             "*.mp3",
             "*.flac",
@@ -54,7 +85,10 @@ class TinyBackend:
             "*.aac",
             "*.opus",
         )
-        files = [f for ext in exts for f in folder.rglob(ext)]
+        files = []
+        for ext in exts:
+            files.extend(folder_path.rglob(ext))
+        
         for f in files:
             self.add_to_playlist(str(f))
         return len(files)
@@ -140,6 +174,115 @@ class TinyBackend:
     @property
     def playlist(self):
         return self._playlist
+        
+    def _is_image_format_supported(self, file_path) -> bool:
+        """Check if the image file format is supported."""
+        ext = Path(file_path).suffix.lower()[1:]
+        return ext in self.SUPPORTED_IMAGE_FORMATS
+        
+    def set_track_image(self, track_path, image_path) -> bool:
+        """
+        Associate an image with a specific track.
+        
+        Args:
+            track_path: Path to the audio file
+            image_path: Path to the image file
+            
+        Returns:
+            bool: True if successful, False otherwise
+            
+        Raises:
+            FileNotFoundError: If the track or image file does not exist
+            ValueError: If the image format is not supported
+        """
+        track_path = Path(track_path)
+        image_path = Path(image_path)
+        
+        # Validate track and image exist
+        if not track_path.exists():
+            raise FileNotFoundError(f"Track not found: {track_path}")
+            
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image not found: {image_path}")
+            
+        # Check if image format is supported
+        if not self._is_image_format_supported(image_path):
+            raise ValueError(
+                f"Image format not supported: {image_path.suffix[1:]}. "
+                f"Supported formats: {', '.join(self.SUPPORTED_IMAGE_FORMATS)}"
+            )
+            
+        # Store the association
+        self._track_images[str(track_path.absolute())] = str(image_path.absolute())
+        
+        # If the track is in the playlist, update its metadata
+        for track in self._playlist:
+            if Path(track["path"]).absolute() == track_path.absolute():
+                track["image"] = str(image_path.absolute())
+                
+        return True
+        
+    def get_track_image(self, track_path) -> Optional[str]:
+        """
+        Get the image path associated with a specific track.
+        
+        Args:
+            track_path: Path to the audio file
+            
+        Returns:
+            Optional[str]: Path to the image file, or None if no image is associated
+        """
+        track_path = str(Path(track_path).absolute())
+        
+        # Check if we have a custom image set for this track
+        if track_path in self._track_images:
+            return self._track_images[track_path]
+            
+        # Look for standard cover files in the track's directory
+        path = Path(track_path)
+        for name in ("cover.jpg", "folder.jpg", "front.jpg", "album.jpg", "artwork.jpg"):
+            cover_path = path.parent / name
+            if cover_path.exists():
+                return str(cover_path)
+        
+        # Try to fetch cover art from online sources
+        online_cover = fetch_cover_art(track_path)
+        if online_cover:
+            # Cache this association for future use
+            self._track_images[track_path] = online_cover
+            
+            # Update playlist entry if this track is in the playlist
+            for track in self._playlist:
+                if str(Path(track["path"]).absolute()) == track_path:
+                    track["image"] = online_cover
+                    
+            return online_cover
+                
+        return None
+        
+    def remove_track_image(self, track_path) -> bool:
+        """
+        Remove the image association for a specific track.
+        
+        Args:
+            track_path: Path to the audio file
+            
+        Returns:
+            bool: True if an association was removed, False if none existed
+        """
+        track_path = str(Path(track_path).absolute())
+        
+        if track_path in self._track_images:
+            del self._track_images[track_path]
+            
+            # Update any playlist entries
+            for track in self._playlist:
+                if str(Path(track["path"]).absolute()) == track_path and "image" in track:
+                    del track["image"]
+                    
+            return True
+            
+        return False
 
 
 # ---------- neon style ----------
@@ -219,11 +362,14 @@ class PlayerWindow(QMainWindow):
         # fallback cover
         self.unknown_cover = QPixmap(200, 200)
         self.unknown_cover.fill(Qt.darkGray)
+        
+        # Keep track of active cover art fetchers
+        self._cover_fetchers = {}
 
         self.setup_ui()
         self.setup_timers()
         self.show()
-
+        
     # ---------- UI ----------
     def setup_ui(self):
         central = QWidget()
@@ -321,11 +467,58 @@ class PlayerWindow(QMainWindow):
         return f"{s//60:02d}:{s % 60:02d}"
 
     def _load_cover(self, path):
+        # First check if the track has an image associated with it through the API
+        cover_path = self.player.get_track_image(path)
+        if cover_path and Path(cover_path).exists():
+            return QPixmap(cover_path)
+            
+        # If no cover found, create a loading placeholder
+        loading_pixmap = QPixmap(200, 200)
+        loading_pixmap.fill(Qt.black)  # Use black background for the loading cover
+        
+        # Start a background thread to fetch the cover from online sources
+        self._start_cover_fetch(path)
+            
+        # Fallback to the old method for local files
         for name in ("cover.jpg", "folder.jpg", "front.jpg"):
             p = Path(path).with_name(name)
             if p.exists():
                 return QPixmap(str(p))
+                
         return self.unknown_cover
+        
+    def _start_cover_fetch(self, path):
+        """Start a background thread to fetch cover art."""
+        # Clean up any previous fetcher for this track
+        path_key = str(Path(path).absolute())
+        if path_key in self._cover_fetchers:
+            old_fetcher = self._cover_fetchers[path_key]
+            if old_fetcher.isRunning():
+                old_fetcher.terminate()
+                old_fetcher.wait()
+        
+        # Create and start a new fetcher
+        fetcher = CoverArtFetcher(path)
+        fetcher.cover_found.connect(self._on_cover_found)
+        fetcher.start()
+        
+        # Store a reference to prevent garbage collection
+        self._cover_fetchers[path_key] = fetcher
+        
+    @pyqtSlot(str, str)
+    def _on_cover_found(self, track_path, cover_path):
+        """Handle when a cover is found by the background thread."""
+        # Update the track in the player's associations
+        self.player._track_images[track_path] = cover_path
+        
+        # Only update UI if this is the currently playing track
+        current_track = str(Path(self.player.current_media).absolute()) if self.player.current_media else None
+        if current_track == track_path:
+            self.cover_lbl.setPixmap(QPixmap(cover_path))
+        
+        # Clean up the fetcher
+        if track_path in self._cover_fetchers:
+            del self._cover_fetchers[track_path]
 
     @pyqtSlot()
     def update_ui(self):
