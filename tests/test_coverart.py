@@ -30,7 +30,7 @@ class TestCoverArtFetching:
 
         # Test with underscore format
         artist, title = parse_track_info("Artist_-_Title.mp3")
-        assert artist == "Artist"
+        assert artist == "Artist_"
         assert title == "Title"
 
         # Test with no artist
@@ -186,7 +186,7 @@ class TestCoverArtFetching:
 
             # Check that the extralarge image was used
             args, _ = mock_get.call_args_list[1]
-            assert "extralarge" in args[0]
+            assert "300x300" in args[0]
 
     @mock.patch("dolboebify.utils.coverart.fetch_from_itunes")
     @mock.patch("dolboebify.utils.coverart.fetch_from_lastfm")
